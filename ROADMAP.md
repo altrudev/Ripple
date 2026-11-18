@@ -1,6 +1,6 @@
 # Ripple — Roadmap
 
-Last updated: 2026-11-18 · Current version: **v0.4 (live)** — Phases 0–1 done, 21 languages
+Last updated: 2026-11-18 · Current version: **v0.5 (live)** — Phases 0–2 done, 21 languages
 
 Ripple's idea in one line: *code becomes visual objects; flip a switch, see the consequence.*
 The goal of the next versions is to make the map feel **alive** (time, health), **meaningful** (purpose, ghost links) and **actionable** (what to fix next) — and to put it on the altru.dev homepage as a living portfolio.
@@ -21,6 +21,7 @@ The goal of the next versions is to make the map feel **alive** (time, health), 
 | Languages | ✅ 21: JavaScript, TypeScript, Python, Go, Rust, Java, Kotlin, Scala, C, C++, C#, PHP, Ruby, Swift, Dart, Lua, Solidity, GDScript, Shell, HTML, CSS (+ Vue/Svelte, workflows/YAML, Dockerfile, Markdown, Godot scenes, manifests, universal "mentions"). Listed on the page itself |
 | Layout (Phase 0) | ✅ v0.3: fits the window at every size, no page scroll; compact top bar + one-line tagline + language chips; opens straight onto an example map; insight strip opens details in the side panel; phone = full map + bottom sheet |
 | Time (Phase 1) | ✅ v0.4: time bar under the map. Account: slider from first repo to today, repos appear at birth (teal ring), glow = pushed in the last ~month, fade = quiet 6–18 months; Play animates the history. Repo: 1 extra call for the last 100 commits; each commit's changed files light up (1 call per commit, fetched on demand, stops before the visitor's hourly limit runs low); files appear when first added. Example map has a built-in 8-commit history |
+| Health (Phase 2) | ✅ v0.5: ring around every repo/code file — green healthy · amber worth a look · grey quiet — with a one-line reason on hover and in the details. Repos: README, description, license, 10+ open issues/PRs, archived, untouched 1 year+ (no extra calls). Files: a test imports it or matches its name (`foo.test.js`, `test_foo.py`, `foo_test.go`), hub (3+ dependents) without tests, runtime loads. "Needs attention" card → riskiest-first list in the side panel (reach × what's missing). Ring level + reason included in the engine model export |
 | Readability + resize | ✅ v0.4: numbers and headings in DM Sans (Syne kept only for the logo); map labels 13px semibold; the map follows window resizes and keeps your zoom/position centred |
 | Hosting | ✅ altru.dev/apps/ripple/try (static), product page altru.dev/apps/ripple (featured) |
 | Tests | ✅ `tests/core.test.js` (Node, no deps). Browser tests were run ad hoc with Playwright — not yet in repo |
@@ -60,7 +61,7 @@ UI rule (applies to every phase): *simple on the surface, meaningful detail on d
 - **Done when:** dragging the slider re-renders in <16 ms per frame for 100 repos; activity glow visible without explanation. *(Measured: under 1 ms per frame for 100 repos.)*
 - Honest limit: GitHub only gives each repo's *last* push, so before that date the map makes no claim about activity (no glow, no fade).
 
-## Phase 2 — Health (vital-sign rings)
+## Phase 2 — Health (vital-sign rings) — ✅ shipped in v0.5
 
 - Ring around each object: green / amber / grey.
 - **Account signals (no extra calls):** has description, license, archived, open issues, days since push, has README (already fetched), has manifest.
@@ -68,6 +69,7 @@ UI rule (applies to every phase): *simple on the surface, meaningful detail on d
 - **Repo signals:** per file — test coverage hint (a test file references it), hub-without-tests warning, size, unknown runtime loads.
 - "Needs attention" list in the side panel, sorted by risk = reach × missing safety.
 - **Done when:** every ring has a one-line "why" on hover.
+- Not yet: tests folder / CI workflow per repo in account mode (needs a token or the Phase 7 snapshot); file size signal.
 
 ## Phase 3 — Meaning (group by purpose, not by name)
 

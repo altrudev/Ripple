@@ -99,6 +99,11 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #modal .card{width:min(820px,100%);display:flex;flex-direction:column;gap:12px}
 #modal textarea{width:100%;height:50vh;background:var(--deep);color:var(--text);border:1.5px solid var(--line);border-radius:12px;padding:12px;font:12px/1.4 ui-monospace,Menlo,monospace}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* ---- Phase 2: health ---- */
+.why{display:flex;align-items:flex-start;gap:6px;margin-top:4px}
+.why i{flex:none;width:9px;height:9px;border-radius:50%;margin-top:4px;border:2px solid currentColor;background:transparent}
+.risk{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left}
+.risk small{color:var(--muted);font-size:12px;white-space:normal}
 /* ---- Phase 1: time bar ---- */
 .timebar{position:absolute;left:12px;right:12px;bottom:12px;display:flex;align-items:center;gap:10px;background:rgba(20,17,31,.9);border:1px solid var(--line);border-radius:14px;padding:5px 12px 5px 5px;z-index:2}
 .timebar[hidden]{display:none}
@@ -749,6 +754,40 @@ function addedTimes(commits) {
   commits.forEach(function (c) { (c.files || []).forEach(function (f) { if (f.s === 'added' && (!a.has(f.p) || c.t < a.get(f.p))) a.set(f.p, c.t); }); });
   return a;
 }
+// ----- health (Phase 2) -----
+var TEST_RE = /(^|\/)(tests?|__tests__|specs?)\/|[._-](test|spec)\.[a-z0-9]+$|_test\.go$|(^|\/)test_[^\/]+\.py$/i;
+function stemOf(p) { return baseOf(p).replace(/\.[^.]+$/, '').replace(/^test_|[._-](test|spec)$|_test$/i, '').toLowerCase(); }
+// Per file: ok (a test checks it), warn (many rely on it but no test, or runtime loads), quiet (no test, little reach). byId from linkUp.
+function fileHealth(nodes) {
+  var tests = nodes.filter(function (n) { return n.kind === 'file' && TEST_RE.test(n.id); }), covered = new Set(), stems = new Set();
+  tests.forEach(function (t) { t.out.forEach(function (id) { covered.add(id); }); stems.add(stemOf(t.id)); });
+  var out = new Map();
+  nodes.forEach(function (n) {
+    if (n.kind !== 'file' || !/^(code|script|page|style)$/.test(n.sub)) return;
+    var used = n.inn.length, rt = n.unknown > 0;
+    if (TEST_RE.test(n.id)) { out.set(n.id, { level: 'ok', why: 'A test file' }); return; }
+    var hit = covered.has(n.id) || stems.has(stemOf(n.id));
+    if (hit && rt) out.set(n.id, { level: 'warn', why: 'Tested, but it loads code by name at runtime — check those links by hand' });
+    else if (hit) out.set(n.id, { level: 'ok', why: 'A test checks it' });
+    else if (used >= 3) out.set(n.id, { level: 'warn', why: used + ' files rely on it and no test touches it' });
+    else if (rt) out.set(n.id, { level: 'warn', why: 'Loads code by name at runtime — the map can’t follow it' });
+    else out.set(n.id, { level: 'quiet', why: tests.length ? 'No test touches it' : 'No tests in this repo' });
+  });
+  return out;
+}
+// Per repo, from what the repo list + README fetch already gave us. now = ms.
+function repoHealth(r, now) {
+  if (r.archived) return { level: 'quiet', why: 'Archived — read-only' };
+  var idle = r.pushedT ? (now - r.pushedT) / DAY : 0;
+  if (idle > 365) return { level: 'quiet', why: 'Untouched for over a year' };
+  var miss = [];
+  if (!r.readme) miss.push('no README');
+  if (!r.desc) miss.push('no description');
+  if (!r.license) miss.push('no license');
+  if (r.issues >= 10) miss.push(r.issues + ' open issues/PRs');
+  if (miss.length) return { level: 'warn', why: miss.join(' · ').replace(/^./, function (c) { return c.toUpperCase(); }), miss: miss.length };
+  return { level: 'ok', why: 'README, description and license in place' };
+}
 // ===== CORE END =====
 
 var SAMPLE = {
@@ -766,6 +805,7 @@ var SAMPLE = {
   'js/ui/pages/billing.js': "import { render } from '../render.js';\nimport { api } from '../../api/client.js';\nexport default {};",
   'js/utils/format.js': "import dayjs from 'dayjs';\nexport const fmt = d => dayjs(d).format('MMM D');",
   'js/utils/retry.js': 'export const retry = fn => fn();',
+  'tests/format.test.js': "import { fmt } from '../js/utils/format.js';\nimport { store } from '../js/store.js';\nconsole.assert(fmt('2026-01-02'));",
   'js/utils/events.js': 'export const emit = () => {};',
   'js/legacy/old-chart.js': "import Chart from 'chart.js/auto';\nimport { fmt } from '../utils/format.js';",
   'js/utils/theme.js': "import { store } from '../store.js';\nimport './missing-colors.js';",
@@ -951,7 +991,7 @@ function buildAccountGraph(owner, repos) {
     info.own.forEach(function (o) { ownPkg.set(o, r.name); });
     byName.set(r.name.toLowerCase(), r.name);
     nodes.push({ id: 'repo:' + r.name, kind: 'file', sub: 'repo', label: r.name, group: group, unknown: 0,
-      repo: { desc: r.description || '', lang: r.language || '', stars: r.stargazers_count || 0, pushed: (r.pushed_at || '').slice(0, 10), created: Date.parse(r.created_at) || 0, pushedT: Date.parse(r.pushed_at) || 0, url: r.html_url, archived: r.archived, deps: info.deps.length, size: r.size || 0 } });
+      repo: { desc: r.description || '', lang: r.language || '', stars: r.stargazers_count || 0, pushed: (r.pushed_at || '').slice(0, 10), created: Date.parse(r.created_at) || 0, pushedT: Date.parse(r.pushed_at) || 0, readme: !!(r._f['README.md'] || r._f['readme.md']), license: r.license ? (r.license.spdx_id || 'yes') : '', issues: r.open_issues_count || 0, url: r.html_url, archived: r.archived, deps: info.deps.length, size: r.size || 0 } });
   });
   var depUse = new Map();
   repos.forEach(function (r) {
@@ -1010,6 +1050,7 @@ function start(res) {
   $('#status').style.display = 'none';
   $('#app').style.display = 'flex';
   document.body.classList.add('has-map');
+  setupHealth();
   setupTime(res);
   renderHead(); renderInsights(); renderLegend(); renderPkgs(); renderSel(); renderImpact();
   resize();
@@ -1109,6 +1150,7 @@ function draw(t) {
     shapePath(n);
     if (isRem) { ctx.fillStyle = '#14111F'; ctx.fill(); ctx.strokeStyle = '#F4F1EC'; ctx.lineWidth = lw * 2; ctx.stroke(); var s = n.r * .6; ctx.beginPath(); ctx.moveTo(n.x - s, n.y - s); ctx.lineTo(n.x + s, n.y + s); ctx.moveTo(n.x + s, n.y - s); ctx.lineTo(n.x - s, n.y + s); ctx.stroke(); }
     else ctx.fill();
+    if (n._h && !isRem && !isB) { var r0 = n.r; n.r = r0 + 3.2 / v.k + r0 * 0.12; ctx.beginPath(); shapePath(n); n.r = r0; ctx.strokeStyle = HEALTH_COLOR[n._h.level]; ctx.lineWidth = lw * (n._h.level === 'quiet' ? 1.4 : 2); ctx.stroke(); }
     if (n === sel) { ctx.globalAlpha = 1; ctx.strokeStyle = '#F4F1EC'; ctx.lineWidth = lw * 2; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 4 / v.k, 0, Math.PI * 2); ctx.stroke(); }
     if (isB && !isRem) {
       var age = t - S.rippleT - S.depth.get(n.id) * 140;
@@ -1171,6 +1213,7 @@ cv.addEventListener('pointermove', function (e) {
     tip.innerHTML = '';
     tip.appendChild(el('b', { text: n.kind === 'package' || n.repo ? n.label : n.id }));
     tip.appendChild(el('span', { text: (SUB_LABEL[n.sub] || n.sub || '') + ' · used by ' + n.inn.length + ' · uses ' + n.out.length + (n.repo && n.repo.pushedT ? ' · last work ' + ago(n.repo.pushedT) : '') }));
+    if (n._h) tip.appendChild(el('span', { class: 'why', style: 'color:' + HEALTH_COLOR[n._h.level] }, [el('i'), el('span', { style: 'color:var(--text)', text: n._h.why })]));
     tip.style.left = Math.min(sx + 14, W - 290) + 'px'; tip.style.top = (sy + 14) + 'px';
     cv.style.cursor = 'pointer';
   } else { tip.style.display = 'none'; cv.style.cursor = 'grab'; }
@@ -1209,7 +1252,7 @@ var D0 = Date.UTC(2026, 6, 1);
 var SAMPLE_HISTORY = [
   { msg: 'First version: page, app shell and store', d: 0, files: ['index.html:added', 'js/app.js:added', 'js/store.js:added', 'js/ui/render.js:added', 'package.json:added'] },
   { msg: 'Add router and pages', d: 9, files: ['js/router.js:added', 'js/ui/pages/home.js:added', 'js/ui/pages/settings.js:added', 'js/app.js:modified'] },
-  { msg: 'Date formatting with dayjs', d: 16, files: ['js/utils/format.js:added', 'js/ui/render.js:modified', 'package.json:modified'] },
+  { msg: 'Date formatting with dayjs', d: 16, files: ['js/utils/format.js:added', 'tests/format.test.js:added', 'js/ui/render.js:modified', 'package.json:modified'] },
   { msg: 'Talk to the API, with retries', d: 27, files: ['js/api/client.js:added', 'js/api/auth.js:added', 'js/utils/retry.js:added', 'js/utils/events.js:added', 'js/store.js:modified'] },
   { msg: 'Charts for the old dashboard', d: 35, files: ['js/legacy/old-chart.js:added', 'package.json:modified'] },
   { msg: 'Work offline (service worker)', d: 48, files: ['sw.js:added', 'js/sw-cache.js:added', 'js/app.js:modified', 'index.html:modified'] },
@@ -1258,6 +1301,7 @@ function renderInsights() {
     var rs = S.nodes.filter(function (n) { return n.sub === 'repo'; });
     var rr = g.edges.filter(function (e) { return e.to.indexOf('repo:') === 0; });
     box.appendChild(insight('Mapped', rs.length + ' repos', rr.length + ' links between them · ' + (g.sharedCount || 0) + ' shared outside packages'));
+    attentionInsight(box);
     var hubR = rs.slice().sort(function (a, b) { return b.inn.length - a.inn.length; }).filter(function (n) { return n.inn.length > 0; });
     if (hubR.length) box.appendChild(insight('Most relied on', hubR[0].label, 'Other repos point to it ' + hubR[0].inn.length + ' time' + (hubR[0].inn.length === 1 ? '' : 's'), hubR.slice(0, 6).map(function (n) { return { id: n.id, label: n.label + ' · ' + n.inn.length }; })));
     var lone = rs.filter(function (n) { return !n.inn.some(function (i) { return i.indexOf('repo:') === 0; }) && !n.out.some(function (o) { return o.indexOf('repo:') === 0; }); });
@@ -1272,6 +1316,7 @@ function renderInsights() {
   var cnt = {}; files.forEach(function (n) { cnt[n.sub] = (cnt[n.sub] || 0) + 1; });
   var mix = ['code', 'page', 'script', 'style', 'workflow', 'config', 'doc'].filter(function (k) { return cnt[k]; }).map(function (k) { return cnt[k] + ' ' + (k === 'doc' ? 'docs' : k === 'code' ? 'code' : k === 'config' ? 'config' : k + (cnt[k] > 1 ? 's' : '')); }).join(' · ');
   box.appendChild(insight('Mapped', (files.length + pkgs.length) + ' objects', mix + (pkgs.length ? ' · ' + pkgs.length + ' outside' : '') + ' — ' + g.edges.length + ' links'));
+  attentionInsight(box, true);
   var hubs = files.slice().sort(function (a, b) { return b.inn.length - a.inn.length; }).filter(function (n) { return n.inn.length > 1; });
   if (hubs.length) {
     var top = hubs[0], reach = rippleFrom([top.id], S.byId).size - 1;
@@ -1294,6 +1339,7 @@ function renderLegend() {
     rl.setAttribute('aria-label', 'Rounded square: repo. Solid line: uses or links. Dashed line: mentions');
     lg.appendChild(rl);
     lg.appendChild(el('span', {}, [el('i', { style: 'background:' + BREAK }), 'would break']));
+    lg.appendChild(healthLegend());
     if (S.time) lg.appendChild(el('span', {}, [el('i', { style: 'background:#FFE2A0;box-shadow:0 0 6px 3px rgba(255,226,160,.6)' }), 'worked on lately · faded = quiet for a year']));
     return;
   }
@@ -1302,6 +1348,7 @@ function renderLegend() {
   shp.setAttribute('aria-label', 'Shapes: circle code, hexagon script, triangle config, page doc, dashed line mention');
   lg.appendChild(shp);
   lg.appendChild(el('span', {}, [el('i', { style: 'background:' + BREAK }), 'would break']));
+  if (S.health && S.health.size) lg.appendChild(healthLegend());
   if (S.time) lg.appendChild(el('span', {}, [el('i', { style: 'background:#FFE2A0;box-shadow:0 0 6px 3px rgba(255,226,160,.6)' }), 'changed in this commit']));
 }
 function renderPkgs() {
@@ -1327,6 +1374,7 @@ function renderSel() {
   var reach = rippleFrom([n.id], S.byId).size - 1, off = S.removed.has(n.id);
   p.appendChild(el('h3', { text: n.label }));
   p.appendChild(el('span', { class: 'path', text: n.kind === 'package' ? 'Outside · ' + (SUB_LABEL[n.sub] || '') : n.repo ? (n.repo.lang || 'repository') + (n.group !== (n.repo.lang || 'Other') ? ' · ' + n.group : '') + (n.repo.archived ? ' · archived' : '') : n.id + ' · ' + (SUB_LABEL[n.sub] || '') }));
+  if (n._h) p.appendChild(el('span', { class: 'why', style: 'color:' + HEALTH_COLOR[n._h.level] + ';font-size:14px' }, [el('i'), el('span', { style: 'color:var(--text)', text: HEALTH_WORD[n._h.level] + ' — ' + n._h.why })]));
   p.appendChild(el('div', { class: 'nums' }, [
     el('span', {}, [el('b', { text: String(n.inn.length) }), 'used by']),
     n.kind === 'file' ? el('span', {}, [el('b', { text: String(n.out.length) }), 'uses']) : null,
@@ -1391,6 +1439,55 @@ $('#q').addEventListener('input', function () {
 });
 
 // ----- engine model export -----
+// ----- health (Phase 2) -----
+var HEALTH_COLOR = { ok: '#8FD694', warn: '#F2C14E', quiet: '#6E6886' };
+var HEALTH_WORD = { ok: 'Looks healthy', warn: 'Worth a look', quiet: 'Quiet' };
+function setupHealth() {
+  S.nodes.forEach(function (n) { n._h = null; });
+  if (S.unit === 'repos') { var now = Date.now(); S.health = new Map(); S.nodes.forEach(function (n) { if (n.repo) { n._h = repoHealth(n.repo, now); S.health.set(n.id, n._h); } }); }
+  else { S.health = fileHealth(S.nodes); S.health.forEach(function (h, id) { S.byId.get(id)._h = h; }); }
+}
+function attentionList() {
+  var out = [];
+  S.health.forEach(function (h, id) {
+    var n = S.byId.get(id), reach = rippleFrom([id], S.byId).size - 1;
+    if (h.level === 'warn') out.push({ n: n, h: h, risk: (reach + 1) * (h.miss || 1) * 10 });
+    else if (h.level === 'quiet' && S.unit !== 'repos' && reach > 0) out.push({ n: n, h: h, risk: reach });
+  });
+  return out.sort(function (a, b) { return b.risk - a.risk || a.n.label.localeCompare(b.n.label); });
+}
+function attentionInsight(box, files) {
+  if (!S.health || !S.health.size) return;
+  var list = attentionList(), warn = list.filter(function (x) { return x.h.level === 'warn'; }).length;
+  var cnt = { ok: 0, warn: 0, quiet: 0 }; S.health.forEach(function (h) { cnt[h.level]++; });
+  var d = cnt.ok + ' healthy · ' + cnt.warn + ' worth a look · ' + cnt.quiet + ' quiet';
+  var card = el('button', { class: 'ins', type: 'button', title: d }, [el('span', { class: 'k', text: 'Needs attention' }), el('span', { class: 'v', text: String(list.length ? warn || list.length : 'Nothing') }), el('span', { class: 'd', text: d })]);
+  card.addEventListener('click', function () { showAttention(card, list, d); });
+  box.appendChild(card);
+}
+function showAttention(card, list, d) {
+  var p = $('#insPane'); p.hidden = false; p.innerHTML = '';
+  Array.prototype.forEach.call(document.querySelectorAll('.ins.on'), function (x) { x.classList.remove('on'); });
+  card.classList.add('on');
+  p.appendChild(el('div', { class: 'row', style: 'justify-content:space-between' }, [el('h3', { text: 'Needs attention' }), el('button', { class: 'chip', type: 'button', 'aria-label': 'Close', onclick: function () { p.hidden = true; card.classList.remove('on'); } }, ['✕'])]));
+  p.appendChild(el('span', { class: 'hint', text: d + '. Riskiest first: how much depends on it × what’s missing.' }));
+  if (!list.length) p.appendChild(el('span', { class: 'hint', text: 'Nothing stands out. Every ring is green or quiet with no reach.' }));
+  list.slice(0, 40).forEach(function (x) {
+    p.appendChild(el('button', { class: 'link risk', type: 'button', onclick: function () { select(x.n.id); centerOn(x.n); } }, [
+      el('span', { class: 'why', style: 'margin:0;color:' + HEALTH_COLOR[x.h.level] }, [el('i'), el('b', { style: 'color:var(--text)', text: S.unit === 'repos' ? x.n.label : x.n.id })]),
+      el('small', { text: x.h.why })
+    ]));
+  });
+  if (list.length > 40) p.appendChild(el('span', { class: 'hint', text: '+' + (list.length - 40) + ' more' }));
+  openSheet(true); $('#side').scrollTop = 0;
+}
+function healthLegend() {
+  var sp = document.createElement('span');
+  sp.innerHTML = '<svg width="200" height="12" viewBox="0 0 200 12" aria-hidden="true" style="flex:none"><g fill="none" stroke-width="2"><circle cx="6" cy="6" r="4.5" stroke="#8FD694"/><circle cx="62" cy="6" r="4.5" stroke="#F2C14E"/><circle cx="142" cy="6" r="4.5" stroke="#6E6886"/></g><g fill="#B9B3C9" font-size="11" font-family="DM Sans, sans-serif"><text x="14" y="10">healthy</text><text x="70" y="10">worth a look</text><text x="150" y="10">quiet</text></g></svg>';
+  sp.setAttribute('aria-label', 'Rings: green healthy, amber worth a look, grey quiet');
+  return sp;
+}
+
 // ----- time bar (Phase 1) -----
 var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function fmtMonth(t) { var d = new Date(t); return MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
@@ -1542,7 +1639,7 @@ function engineModel() {
   return {
     engine: 'ripple/0.1',
     source: { type: S.meta.kind, name: S.meta.name, url: S.meta.url || null, commit: S.meta.commit || null },
-    nodes: S.nodes.map(function (n) { return { id: n.id, kind: n.kind, type: n.sub, group: n.group }; }),
+    nodes: S.nodes.map(function (n) { var o = { id: n.id, kind: n.kind, type: n.sub, group: n.group }; if (n._h) o.health = { level: n._h.level, why: n._h.why }; return o; }),
     edges: S.g.edges.map(function (e) { return { from: e.from, to: e.to, kind: e.how }; }),
     levers: Array.from(leverIds).map(function (id) { var n = S.byId.get(id); return { id: 'remove:' + id, label: 'Remove ' + n.label, type: 'switch', target: id }; }),
     effects: [{ when: 'lever.on', rule: 'reach', from: 'lever.target', direction: 'upstream', mark: 'breaks' }],

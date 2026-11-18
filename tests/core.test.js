@@ -5,7 +5,7 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const script = html.split('<script>\n')[1].split('</script>\n</body>')[0];
 const core = script.split('// ===== CORE START =====')[1].split('// ===== UI =====')[0];
 const R = {};
-new Function('R', core + ';R.buildGraph=buildGraph;R.linkUp=linkUp;R.rippleFrom=rippleFrom;R.SAMPLE=SAMPLE;R.wanted=wanted;R.kindOf=kindOf;R.repoLook=repoLook;R.commitGlow=commitGlow;R.addedTimes=addedTimes;R.DAY=DAY;')(R);
+new Function('R', core + ';R.buildGraph=buildGraph;R.linkUp=linkUp;R.rippleFrom=rippleFrom;R.SAMPLE=SAMPLE;R.wanted=wanted;R.kindOf=kindOf;R.repoLook=repoLook;R.commitGlow=commitGlow;R.addedTimes=addedTimes;R.DAY=DAY;R.fileHealth=fileHealth;R.repoHealth=repoHealth;')(R);
 
 let passed = 0;
 function test(name, fn) { try { fn(); passed++; console.log('ok  ', name); } catch (e) { console.error('FAIL', name, '\n     ', e.message); process.exitCode = 1; } }
@@ -139,6 +139,28 @@ test('time: commit glow trail and first-seen times', () => {
   assert(!g0.has('b.js'));
   const a = R.addedTimes(cs);
   assert.strictEqual(a.get('a.js'), 1); assert.strictEqual(a.get('b.js'), 3);
+});
+
+test('health: files — tested, hub without tests, quiet', () => {
+  const g = R.buildGraph(R.SAMPLE), by = R.linkUp(g), h = R.fileHealth(g.nodes);
+  assert.strictEqual(h.get('js/utils/format.js').level, 'ok', 'imported by a test');
+  assert.strictEqual(h.get('js/store.js').level, 'ok');
+  assert.strictEqual(h.get('tests/format.test.js').level, 'ok');
+  assert.strictEqual(h.get('js/ui/render.js').level, 'warn', 'many rely on it, no test');
+  assert(/rely on it/.test(h.get('js/ui/render.js').why));
+  assert.strictEqual(h.get('js/utils/retry.js').level, 'quiet');
+  assert(!h.has('package.json'), 'configs get no ring');
+  const h2 = R.fileHealth([{ id: 'src/foo.py', kind: 'file', sub: 'code', unknown: 0, inn: [], out: [] }, { id: 'tests/test_foo.py', kind: 'file', sub: 'code', unknown: 0, inn: [], out: [] }]);
+  assert.strictEqual(h2.get('src/foo.py').level, 'ok', 'matched by test file name');
+});
+
+test('health: repos — archived, idle, missing pieces, healthy', () => {
+  const now = 2000 * R.DAY, base = { readme: true, desc: 'x', license: 'MIT', issues: 0, pushedT: now - 5 * R.DAY };
+  assert.strictEqual(R.repoHealth(base, now).level, 'ok');
+  assert.strictEqual(R.repoHealth({ ...base, archived: true }, now).level, 'quiet');
+  assert.strictEqual(R.repoHealth({ ...base, pushedT: now - 400 * R.DAY }, now).level, 'quiet');
+  const w = R.repoHealth({ ...base, license: '', desc: '' }, now);
+  assert.strictEqual(w.level, 'warn'); assert.strictEqual(w.why, 'No description · no license'); assert.strictEqual(w.miss, 2);
 });
 
 console.log('\n' + passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));
