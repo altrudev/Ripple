@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ripple — see what breaks before you touch it</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{--navy:#1E1A2E;--deep:#14111F;--panel:#28233C;--panel2:#221E35;--line:#3D3657;--text:#F4F1EC;--muted:#B9B3C9;--coral:#E8836A;--break:#FF7A59;--teal:#6BBFB0;--amber:#F2C14E}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--navy);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;font-size:15px;line-height:1.45}
+h1,h2,h3{font-family:Syne,sans-serif;margin:0;letter-spacing:-.01em}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--teal)}
+.wrap{max-width:1440px;margin:0 auto;padding:20px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand b{font-family:Syne,sans-serif;font-size:22px;font-weight:800}
+.brand small{display:block;color:var(--muted);font-size:12px}
+.card{background:var(--panel);border-radius:18px;padding:22px}
+.start h1{font-size:clamp(26px,4vw,40px);line-height:1.1;max-width:780px}
+.start p{color:var(--muted);margin:10px 0 18px;max-width:680px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.field{flex:1 1 320px;min-height:50px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--deep);font-size:16px}
+.field:focus{outline:2px solid var(--teal);outline-offset:1px}
+.btn{min-height:48px;padding:12px 20px;border-radius:12px;border:0;font-weight:700;font-size:15px}
+.btn.primary{background:var(--coral);color:var(--navy)}
+.btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--text);font-weight:500}
+.btn.teal{background:var(--teal);color:var(--navy)}
+.btn:focus-visible,.sw:focus-visible,.link:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.or{color:var(--muted);font-size:14px;margin:0 4px}
+details{margin-top:12px;color:var(--muted);font-size:14px}
+details summary{cursor:pointer;min-height:32px;display:flex;align-items:center}
+details .field{margin-top:8px;font-size:14px;min-height:44px}
+#status{margin-top:16px;display:none}
+#status .msg{font-size:14px;color:var(--muted)}
+#status.err .msg{color:#FFB4A0}
+.bar{height:6px;border-radius:999px;background:var(--deep);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;width:0;background:var(--teal);transition:width .2s}
+#app{display:none;margin-top:18px}
+.repohead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px}
+.repohead h2{font-size:24px}
+.repohead span{color:var(--muted);font-size:14px}
+.insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-bottom:14px}
+.ins{background:var(--panel);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.ins .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700}
+.ins .v{font-family:Syne,sans-serif;font-size:26px;font-weight:800;line-height:1.1}
+.ins .d{font-size:13px;color:var(--muted)}
+.ins .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.chip{border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:4px 10px;font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+button.chip{min-height:30px}
+.work{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+.stage{flex:999 1 600px;min-width:0;position:relative;background:var(--deep);border-radius:18px;overflow:hidden;height:min(74vh,820px);min-height:440px}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.ctl{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:6px}
+.ctl button{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:rgba(40,35,60,.9);font-size:20px;display:flex;align-items:center;justify-content:center}
+.legend{position:absolute;left:12px;bottom:12px;right:70px;display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted);pointer-events:none}
+.legend span{display:flex;align-items:center;gap:6px;background:rgba(20,17,31,.75);padding:3px 8px;border-radius:999px}
+.legend i{width:10px;height:10px;border-radius:999px;display:inline-block}
+.banner{position:absolute;left:12px;top:12px;right:70px;pointer-events:none}
+.banner div{display:inline-block;background:rgba(20,17,31,.85);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:14px}
+.banner b{color:var(--break)}
+#tip{position:absolute;pointer-events:none;background:#0E0C16;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;max-width:280px;display:none;z-index:3}
+#tip b{display:block;font-size:13px;word-break:break-all}
+.side{flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:12px}
+.pane{background:var(--panel);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.pane[hidden]{display:none}
+.pane .field{flex:none;width:100%}
+.pane h3{font-size:16px}
+.pane .hint{font-size:13px;color:var(--muted)}
+.search{position:relative}
+.search .field{min-height:44px;font-size:14px;width:100%}
+.results{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.link{display:block;width:100%;text-align:left;background:transparent;border:0;border-radius:8px;padding:8px 10px;font-size:13px;min-height:36px;word-break:break-all}
+.link:hover{background:var(--panel2)}
+.list{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto;padding-right:2px}
+.item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--panel2)}
+.item .t{flex:1;min-width:0;display:flex;flex-direction:column}
+.item .t b{font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .t span{font-size:12px;color:var(--muted)}
+.sw{flex:none;width:52px;height:44px;padding:0;border:0;background:transparent;display:flex;align-items:center}
+.sw i{width:48px;height:28px;border-radius:999px;background:var(--teal);display:flex;align-items:center;justify-content:flex-end;padding:3px;transition:background .2s}
+.sw i::after{content:"";width:22px;height:22px;border-radius:999px;background:var(--text)}
+.sw[aria-checked="false"] i{background:var(--break);justify-content:flex-start}
+.impact .big{font-family:Syne,sans-serif;font-size:30px;font-weight:800;line-height:1.1}
+.impact .big b{color:var(--break)}
+.grp{display:flex;flex-direction:column;gap:2px}
+.grp>div{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:6px}
+.sel .path{font-size:13px;color:var(--muted);word-break:break-all}
+.sel .nums{display:flex;gap:16px;font-size:14px}
+.sel .nums b{font-family:Syne,sans-serif;font-size:20px;display:block}
+.foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px;color:var(--muted);font-size:13px}
+#drop{position:fixed;inset:0;background:rgba(20,17,31,.88);display:none;align-items:center;justify-content:center;z-index:20;border:3px dashed var(--teal)}
+#drop div{font-family:Syne,sans-serif;font-size:28px}
+#modal{position:fixed;inset:0;background:rgba(10,8,16,.75);display:none;align-items:center;justify-content:center;z-index:30;padding:16px}
+#modal .card{width:min(820px,100%);display:flex;flex-direction:column;gap:12px}
+#modal textarea{width:100%;height:50vh;background:var(--deep);color:var(--text);border:1.5px solid var(--line);border-radius:12px;padding:12px;font:12px/1.4 ui-monospace,Menlo,monospace}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (max-width:640px){.wrap{padding:14px}.card{padding:18px}.stage{height:62vh}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="4" fill="#FF7A59"/><circle cx="18" cy="18" r="9.5" fill="none" stroke="#E8836A" stroke-width="2" opacity=".75"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="#6BBFB0" stroke-width="2" opacity=".55"/></svg>
+      <div><b>Ripple</b><small>by <a href="/apps/ripple">ALTRU.dev</a> · public beta</small></div>
+    </div>
+  </header>
+
+  <section class="card start" aria-labelledby="h1">
+    <h1 id="h1">Paste a repo. Switch something off. Watch what breaks.</h1>
+    <p>Ripple turns every file — code, scripts, configs, workflows and docs — into an object on a live map, linked by what it imports, runs, mentions or uses. Switch one off and see the ripple before you change anything. Runs in your browser — nothing is uploaded anywhere.</p>
+    <form id="form" class="row">
+      <label class="sr" for="url">GitHub repo URL</label>
+      <input id="url" class="field" placeholder="github.com/owner/repo — or github.com/owner for all their repos" autocomplete="off" spellcheck="false">
+      <button class="btn primary" type="submit">Map it</button>
+      <span class="or">or</span>
+      <label class="btn ghost" for="zip" style="display:inline-flex;align-items:center">Open a .zip</label>
+      <input id="zip" type="file" accept=".zip" class="sr">
+      <button class="btn ghost" type="button" id="sample">Try a sample</button>
+    </form>
+    <details>
+      <summary>Private repo, or hit GitHub's hourly limit? Add a token</summary>
+      <label class="sr" for="token">GitHub token</label>
+      <input id="token" type="password" class="field" placeholder="ghp_… (read-only is enough — kept in this tab only, never saved)" autocomplete="off">
+    </details>
+    <div id="status" role="status" aria-live="polite"><div class="msg"></div><div class="bar"><i></i></div></div>
+  </section>
+
+  <section id="app" aria-label="Repo map">
+    <div class="repohead"><h2 id="repoName"></h2><span id="repoMeta"></span></div>
+    <div class="insights" id="insights"></div>
+    <div class="work">
+      <div class="stage" id="stage">
+        <canvas id="cv" aria-label="Dependency map. Use the panels on the right to explore with a keyboard."></canvas>
+        <div class="banner" id="banner"></div>
+        <div class="ctl">
+          <button type="button" id="zin" aria-label="Zoom in">+</button>
+          <button type="button" id="zout" aria-label="Zoom out">−</button>
+          <button type="button" id="zfit" aria-label="Fit map to screen"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 6V2h4M12 2h4v4M16 12v4h-4M6 16H2v-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="legend" id="legend"></div>
+        <div id="tip"></div>
+      </div>
+      <aside class="side">
+        <div class="pane">
+          <h3>Find</h3>
+          <div class="search"><label class="sr" for="q">Search files and packages</label><input id="q" class="field" placeholder="Type a name…" autocomplete="off"><div class="results" id="results"></div></div>
+        </div>
+        <div class="pane sel" id="selPane" hidden></div>
+        <div class="pane impact" id="impactPane" hidden></div>
+        <div class="pane">
+          <h3>What if I remove…</h3>
+          <span class="hint">Switch an outside package, tool or service off to see everything that would break.</span>
+          <label class="sr" for="pq">Filter packages</label>
+          <input id="pq" class="field" placeholder="Filter packages…" autocomplete="off" style="min-height:44px;font-size:14px">
+          <div class="list" id="pkgList"></div>
+        </div>
+      </aside>
+    </div>
+    <div class="foot">
+      <button class="btn teal" type="button" id="exportBtn">Copy engine model</button>
+      <span>The same data format drives quotes, agent permissions and agreements.</span>
+    </div>
+  </section>
+</div>
+
+<div id="drop" aria-hidden="true"><div>Drop the repo .zip</div></div>
+<div id="modal" role="dialog" aria-modal="true" aria-labelledby="mh">
+  <div class="card">
+    <h2 id="mh" style="font-size:20px">Engine model</h2>
+    <span style="color:var(--muted);font-size:14px">Nodes, links, levers, effects and your current switches — one format for every domain.</span>
+    <label class="sr" for="mtext">Engine model JSON</label>
+    <textarea id="mtext" readonly></textarea>
+    <div class="row"><button class="btn teal" type="button" id="mcopy">Copy</button><button class="btn ghost" type="button" id="mclose">Close</button><span id="mmsg" style="color:var(--muted);font-size:14px"></span></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ===== CORE START =====
+var BUILTINS = new Set('assert async_hooks buffer child_process cluster console constants crypto dgram diagnostics_channel dns domain events fs http http2 https inspector module net os path perf_hooks process punycode querystring readline repl stream string_decoder sys timers tls trace_events tty url util v8 vm wasi worker_threads zlib'.split(' '));
+var PY_STD = new Set('__future__ abc argparse array ast asyncio base64 binascii bisect builtins calendar cmath collections concurrent configparser contextlib contextvars copy csv ctypes dataclasses datetime decimal difflib dis email enum errno fnmatch fractions ftplib functools gc getopt getpass gettext glob gzip hashlib heapq hmac html http imaplib importlib inspect io ipaddress itertools json keyword locale logging lzma math mimetypes multiprocessing numbers operator os pathlib pickle pkgutil platform pprint profile queue random re sched secrets select shelve shlex shutil signal smtplib socket socketserver sqlite3 ssl stat statistics string struct subprocess sys sysconfig tarfile tempfile textwrap threading time timeit tkinter token tokenize traceback types typing unicodedata unittest urllib uuid venv warnings wave weakref webbrowser xml xmlrpc zipfile zipimport zlib zoneinfo'.split(' '));
+// Command-line tools worth showing as outside objects (everyday shell builtins like grep/sed are left out on purpose).
+var TOOLS = 'curl wget jq yq git docker podman kubectl helm terraform aws gcloud az gh openssl ssh scp rsync npm npx pnpm yarn deno bun pip pip3 uv cargo rustc gcc clang cmake mvn gradle dotnet composer gem bundle gitleaks trivy semgrep hadolint shellcheck eslint prettier ffmpeg sqlite3 psql mysql redis-cli gpg cosign ollama systemctl'.split(' ');
+var CODE_EXT = 'js mjs cjs jsx ts tsx mts vue svelte py rs go php rb c h cc cpp hpp cxx cs java kt kts swift scala lua pl r dart ex exs erl hs clj sql'.split(' ');
+var TEXT_EXT = CODE_EXT.concat('html htm css scss sass less sh bash zsh fish ps1 bat cmd yml yaml json jsonc toml ini cfg conf xml env properties gradle tf hcl md mdx txt rst adoc'.split(' '));
+var TEXT_RE = new RegExp('\\.(' + TEXT_EXT.join('|') + ')$', 'i');
+var NAMED_RE = /(^|\/)(go\.mod|go\.work|readme|license|licence|notice|changelog|contributing|security|authors|codeowners|makefile|dockerfile|containerfile|procfile|gemfile|rakefile|justfile|vagrantfile|\.gitignore|\.dockerignore|\.editorconfig|\.env\.example|\.nvmrc|\.npmrc|\.safeauditignore)$/i;
+var IGNORE_RE = /(^|\/)(node_modules|bower_components|dist|build|out|vendor|target|\.git|__pycache__|coverage|\.next|\.nuxt|\.venv|venv|site-packages|\.idea|\.vscode)(\/|$)|\.min\.(js|css)$|\.d\.ts$|\.bundle\.js$|\.map$|(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.lock|poetry\.lock|composer\.lock|Gemfile\.lock|go\.sum|uv\.lock)$/i;
+var MANIFEST_RE = /(^|\/)(package\.json|requirements[^\/]*\.txt|Cargo\.toml|go\.mod|pyproject\.toml|composer\.json)$/i;
+var SRC_RE = TEXT_RE; // kept for compatibility
+var MAX_FILES = 600, MAX_BYTES = 400000, MAX_TEXT_BYTES = 200000;
+
+function extOf(p) { var b = baseOf(p); var i = b.lastIndexOf('.'); return i > 0 ? b.slice(i + 1).toLowerCase() : ''; }
+function isTextPath(p) { var b = baseOf(p); return TEXT_RE.test(p) || NAMED_RE.test(p) || /^dockerfile\./i.test(b) || (b.indexOf('.') < 0 && b.length > 0); }
+function kindOf(p) {
+  var b = baseOf(p).toLowerCase(), e = extOf(p);
+  if (/^\.github\/workflows\//i.test(p) || /(^|\/)\.gitlab-ci\.yml$/i.test(p)) return 'workflow';
+  if (/^(readme|license|licence|notice|changelog|contributing|security|authors|code_of_conduct)(\.|$)/.test(b) || /^(md|mdx|txt|rst|adoc)$/.test(e)) return 'doc';
+  if (/^(sh|bash|zsh|fish|ps1|bat|cmd)$/.test(e) || /^(makefile|justfile)$/.test(b)) return 'script';
+  if (/^(css|scss|sass|less)$/.test(e)) return 'style';
+  if (/^(html|htm)$/.test(e)) return 'page';
+  if (CODE_EXT.indexOf(e) >= 0) return 'code';
+  return 'config';
+}
+var KIND_RANK = { code: 0, page: 1, script: 1, style: 2, workflow: 2, config: 3, doc: 4 };
+function wanted(path, size) {
+  if (IGNORE_RE.test(path)) return false;
+  if (!isTextPath(path)) return false;
+  var k = kindOf(path), lim = (k === 'code' || k === 'page' || k === 'script') ? MAX_BYTES : MAX_TEXT_BYTES;
+  if (baseOf(path).indexOf('.') < 0 && !NAMED_RE.test(path)) lim = 100000; // extensionless: likely a script, but stay small in case it's a binary
+  return !(size != null && size > lim);
+}
+function normPath(p) { var out = []; p.split('/').forEach(function (s) { if (!s || s === '.') return; if (s === '..') out.pop(); else out.push(s); }); return out.join('/'); }
+function dirOf(p) { var i = p.lastIndexOf('/'); return i < 0 ? '' : p.slice(0, i); }
+function baseOf(p) { var i = p.lastIndexOf('/'); return p.slice(i + 1); }
+function pkgName(spec) { var s = spec.split('/'); return spec.charAt(0) === '@' ? s.slice(0, 2).join('/') : s[0]; }
+function cdnName(url) {
+  try { var u = new URL(url.indexOf('//') === 0 ? 'https:' + url : url); var f = baseOf(u.pathname); if (!f || f.indexOf('.') < 0) f = u.hostname.replace(/^www\./, ''); return f.replace(/(\.min)?\.(m?js|css)$/, ''); }
+  catch (e) { return 'CDN file'; }
+}
+function stripJsComments(s) { return s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:\\'"`])\/\/[^\n]*/g, '$1'); }
+function each(re, s, fn) { var m; re.lastIndex = 0; while ((m = re.exec(s))) fn(m); }
+
+// ---- per-language readers: each returns { refs: [...], unknown: n } ----
+// ref shapes: {t:'path', spec, how}  {t:'pkg', name, how}  {t:'ext', id, label, how}  {t:'py', ...}  {t:'gopkg', path}
+function jsRefs(src) {
+  var s = stripJsComments(src), refs = [], m;
+  var asUrl = function (x) { return /^(\.|\/|[a-z]+:|\/\/)/i.test(x) ? x : './' + x; };
+  each(/(?:^|[;\s}])(?:import|export)\s[^;'"`]*?\sfrom\s*['"]([^'"\n]+)['"]/g, s, function (m) { refs.push({ t: 'js', spec: m[1], how: 'imports' }); });
+  each(/(?:^|[;\s])import\s*['"]([^'"\n]+)['"]/g, s, function (m) { refs.push({ t: 'js', spec: m[1], how: 'imports' }); });
+  each(/\brequire\s*\(\s*['"]([^'"\n]+)['"]\s*\)/g, s, function (m) { refs.push({ t: 'js', spec: m[1], how: 'imports' }); });
+  each(/\bimport\s*\(\s*['"]([^'"\n]+)['"]\s*\)/g, s, function (m) { refs.push({ t: 'js', spec: m[1], how: 'imports' }); });
+  each(/(?:new\s+(?:Shared)?Worker|serviceWorker\.register)\s*\(\s*(?:new\s+URL\s*\(\s*)?['"]([^'"\n]+)['"]/g, s, function (m) { refs.push({ t: 'js', spec: asUrl(m[1]), how: 'runs' }); });
+  each(/\bimportScripts\s*\(([^)]*)\)/g, s, function (m) { each(/['"]([^'"]+)['"]/g, m[1], function (k) { refs.push({ t: 'js', spec: asUrl(k[1]), how: 'runs' }); }); });
+  var unknown = (s.match(/\bimport\s*\(\s*(?!['"\s])/g) || []).length + (s.match(/\brequire\s*\(\s*(?!['"\s])/g) || []).length;
+  return { refs: refs, unknown: unknown };
+}
+function htmlRefs(src) {
+  var refs = [], unknown = 0;
+  each(/<script\b[^>]*?\bsrc\s*=\s*['"]([^'"]+)['"]/gi, src, function (m) { refs.push({ t: 'web', spec: m[1], how: 'loads' }); });
+  each(/<link\b[^>]*?\bhref\s*=\s*['"]([^'"]+)['"]/gi, src, function (m) { refs.push({ t: 'web', spec: m[1], how: 'loads' }); });
+  each(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, src, function (m) { if (m[1].trim()) { var r = jsRefs(m[1]); r.refs.forEach(function (x) { refs.push(x); }); unknown += r.unknown; } });
+  return { refs: refs, unknown: unknown };
+}
+function cssRefs(src) {
+  var refs = [], s = src.replace(/\/\*[\s\S]*?\*\//g, ' ');
+  each(/@import\s+(?:url\()?\s*['"]?([^'"\s);]+)/g, s, function (m) { refs.push({ t: 'web', spec: m[1], how: 'imports' }); });
+  each(/url\(\s*['"]?([^'"\s)]+)/g, s, function (m) { if (!/^(data|blob|#)/i.test(m[1])) refs.push({ t: 'web', spec: m[1], how: 'loads' }); });
+  return { refs: refs, unknown: 0 };
+}
+function pyRefs(src) {
+  var s = src.replace(/("""|''')[\s\S]*?\1/g, '').replace(/#[^\n]*/g, ''), refs = [];
+  each(/^[ \t]*from[ \t]+(\.*)([\w.]*)[ \t]+import[ \t]+(\([^)]*\)|[^\n]+)/gm, s, function (m) {
+    var names = m[3].replace(/[()\\\n]/g, ' ').split(',').map(function (x) { return x.trim().split(/\s+as\s+/)[0].trim(); }).filter(function (x) { return x && x !== '*'; });
+    refs.push({ t: 'py', dots: m[1].length, mod: m[2], names: names });
+  });
+  each(/^[ \t]*import[ \t]+([\w.][\w., \t]*)/gm, s, function (m) { m[1].split(',').forEach(function (part) { var n = part.trim().split(/\s+as\s+/)[0].trim(); if (n) refs.push({ t: 'py', dots: 0, mod: n, names: [] }); }); });
+  var unknown = (s.match(/\b(?:importlib\.import_module|__import__)\s*\(\s*(?!['"])/g) || []).length;
+  return { refs: refs, unknown: unknown };
+}
+function shRefs(src) {
+  var s = src.replace(/(^|[\s;])#(?!!)[^\n]*/g, '$1'), refs = [];
+  var ok = function (x) { return x && x.indexOf('$') < 0 && !/^-/.test(x); };
+  each(/(?:^|[;&|\s(])(?:source|\.)[ \t]+["']?([^\s"';|&)]+)/g, s, function (m) { if (ok(m[1]) && m[1] !== '.') refs.push({ t: 'path', spec: m[1], how: 'runs', alsoRoot: true }); });
+  each(/(?:^|[;&|\s(])(?:bash|sh|zsh|python3?|node|ruby|perl|php|deno|bun)[ \t]+(?:-\w+[ \t]+)*["']?([^\s"';|&$)]+\.\w+)/g, s, function (m) { if (ok(m[1])) refs.push({ t: 'path', spec: m[1], how: 'runs', alsoRoot: true }); });
+  each(/(?:^|[;&|\s(`])(\.{1,2}\/[^\s"';|&$)`]+)/g, s, function (m) { if (ok(m[1]) && /\w/.test(m[1])) refs.push({ t: 'path', spec: m[1], how: 'runs', alsoRoot: true }); });
+  var tre = new RegExp('(?:^|[\\s;&|(`]|\\$\\()(' + TOOLS.map(function (t) { return t.replace(/[-.]/g, '\\$&'); }).join('|') + ')(?=[\\s;&|)`]|$)', 'gm');
+  each(tre, s, function (m) { refs.push({ t: 'ext', id: 'tool:' + m[1], label: m[1], sub: 'tool', how: 'uses' }); });
+  each(/docker[ \t]+(?:run|pull)[^\n]*?[ \t]([a-z0-9][\w.\-]*\/[\w.\-\/]+(?::[\w.\-]+)?)(?=[\s;&|]|$)/gm, s, function (m) { refs.push({ t: 'ext', id: 'image:' + m[1].split(':')[0], label: m[1].split(':')[0], sub: 'image', how: 'uses' }); });
+  return { refs: refs, unknown: 0 };
+}
+function yamlRefs(src) {
+  var refs = [];
+  each(/^\s*-?\s*uses:\s*["']?([^\s"'#]+)/gm, src, function (m) {
+    var u = m[1];
+    if (/^\.{0,2}\//.test(u)) refs.push({ t: 'path', spec: u, how: 'runs', root: true });
+    else if (/^docker:\/\//.test(u)) refs.push({ t: 'ext', id: 'image:' + u.slice(9).split(':')[0], label: u.slice(9).split(':')[0], sub: 'image', how: 'uses' });
+    else { var a = u.split('@')[0].split('/').slice(0, 2).join('/'); refs.push({ t: 'ext', id: 'action:' + a, label: a, sub: 'action', how: 'uses' }); }
+  });
+  each(/^\s*image:\s*["']?([^\s"'#]+)/gm, src, function (m) { var im = m[1].split(':')[0]; if (!/\$/.test(im)) refs.push({ t: 'ext', id: 'image:' + im, label: im, sub: 'image', how: 'uses' }); });
+  each(/^\s*(?:build|context|dockerfile|env_file|file|path|script):\s*["']?(\.{0,2}\/?[\w.\-\/]+\.?[\w]*)["']?\s*$/gm, src, function (m) { if (/[\/.]/.test(m[1])) refs.push({ t: 'path', spec: m[1], how: 'uses', root: true }); });
+  var sh = shRefs(src); sh.refs.forEach(function (r) { if (r.t === 'path') r.root = true; refs.push(r); });
+  return { refs: refs, unknown: 0 };
+}
+function dockerRefs(src) {
+  var refs = [];
+  each(/^\s*FROM\s+(?:--\S+\s+)*([^\s]+)/gim, src, function (m) { var im = m[1].split(':')[0]; if (!/\$/.test(im) && im !== 'scratch') refs.push({ t: 'ext', id: 'image:' + im, label: im, sub: 'image', how: 'uses' }); });
+  each(/^\s*(?:COPY|ADD)\s+(?:--\S+\s+)*([^\n]+)/gim, src, function (m) { var parts = m[1].trim().split(/\s+/); parts.slice(0, -1).forEach(function (p) { if (!/[\$*]/.test(p) && p !== '.') refs.push({ t: 'path', spec: p, how: 'copies', root: true }); }); });
+  each(/^\s*RUN\s+([^\n]+)/gim, src, function (m) { shRefs(m[1]).refs.forEach(function (r) { r.root = true; refs.push(r); }); });
+  return { refs: refs, unknown: 0 };
+}
+function mdRefs(src) {
+  var refs = [];
+  each(/\]\(\s*<?([^)\s>#]+)/g, src, function (m) { if (!/^(https?:|mailto:|#)/i.test(m[1])) refs.push({ t: 'path', spec: m[1], how: 'links' }); });
+  return { refs: refs, unknown: 0 };
+}
+function rustRefs(src, p) {
+  var s = stripJsComments(src), refs = [];
+  each(/^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+(\w+)\s*;/gm, s, function (m) { refs.push({ t: 'rsmod', name: m[1] }); });
+  each(/\buse\s+(?:::)?([\w:]+)/g, s, function (m) { refs.push({ t: 'rsuse', path: m[1] }); });
+  each(/\bextern\s+crate\s+(\w+)/g, s, function (m) { refs.push({ t: 'pkg', name: m[1], how: 'imports' }); });
+  return { refs: refs, unknown: 0 };
+}
+function goRefs(src) {
+  var s = stripJsComments(src), refs = [];
+  each(/\bimport\s*\(([\s\S]*?)\)/g, s, function (m) { each(/"([^"]+)"/g, m[1], function (k) { refs.push({ t: 'gopkg', path: k[1] }); }); });
+  each(/\bimport\s+(?:[\w.]+\s+)?"([^"]+)"/g, s, function (m) { refs.push({ t: 'gopkg', path: m[1] }); });
+  return { refs: refs, unknown: 0 };
+}
+function phpRefs(src) {
+  var s = stripJsComments(src).replace(/#[^\n]*/g, ''), refs = [];
+  each(/\b(?:require|include)(?:_once)?\s*\(?\s*(__DIR__\s*\.\s*|dirname\(__FILE__\)\s*\.\s*)?['"]([^'"]+)['"]/g, s, function (m) { refs.push({ t: 'path', spec: (m[1] ? '.' : '') + (m[1] && m[2].charAt(0) !== '/' ? '/' : '') + m[2], how: 'imports', alsoRoot: true }); });
+  return { refs: refs, unknown: (s.match(/\b(?:require|include)(?:_once)?\s*\(?\s*\$/g) || []).length };
+}
+function rubyRefs(src) {
+  var s = src.replace(/#[^\n]*/g, ''), refs = [];
+  each(/\brequire_relative\s*\(?\s*['"]([^'"]+)['"]/g, s, function (m) { refs.push({ t: 'path', spec: './' + m[1].replace(/^\.\//, ''), how: 'imports', exts: ['.rb'] }); });
+  each(/\brequire\s*\(?\s*['"]([^'"]+)['"]/g, s, function (m) { refs.push({ t: 'rbreq', spec: m[1] }); });
+  return { refs: refs, unknown: 0 };
+}
+function cRefs(src) {
+  var refs = [];
+  each(/^\s*#\s*include\s*"([^"]+)"/gm, src, function (m) { refs.push({ t: 'path', spec: m[1], how: 'imports', alsoRoot: true, alsoInclude: true }); });
+  return { refs: refs, unknown: 0 };
+}
+function jvmRefs(src) {
+  var refs = [];
+  each(/^\s*import\s+(?:static\s+)?([\w.]+)(?:\.\*)?\s*;?\s*$/gm, src, function (m) { refs.push({ t: 'jvm', name: m[1] }); });
+  return { refs: refs, unknown: 0 };
+}
+
+function readerFor(p) {
+  var e = extOf(p), b = baseOf(p).toLowerCase(), k = kindOf(p);
+  if (/^(js|mjs|cjs|jsx|ts|tsx|mts|vue|svelte)$/.test(e)) return jsRefs;
+  if (e === 'py') return pyRefs;
+  if (e === 'html' || e === 'htm') return htmlRefs;
+  if (/^(css|scss|sass|less)$/.test(e)) return cssRefs;
+  if (/^(sh|bash|zsh|fish)$/.test(e) || b === 'makefile' || b === 'justfile') return shRefs;
+  if (e === 'yml' || e === 'yaml') return yamlRefs;
+  if (/^(dockerfile|containerfile)/.test(b)) return dockerRefs;
+  if (e === 'md' || e === 'mdx') return mdRefs;
+  if (e === 'rs') return rustRefs;
+  if (e === 'go') return goRefs;
+  if (e === 'php') return phpRefs;
+  if (e === 'rb') return rubyRefs;
+  if (/^(c|h|cc|cpp|hpp|cxx)$/.test(e)) return cRefs;
+  if (/^(java|kt|kts|scala)$/.test(e)) return jvmRefs;
+  return null;
+}
+// A first line like "#!/usr/bin/env bash" turns an extensionless file into a script.
+function shebangReader(src) { var l = (src || '').slice(0, 120).split('\n')[0]; if (!/^#!/.test(l)) return null; if (/python/.test(l)) return pyRefs; if (/node|deno|bun/.test(l)) return jsRefs; if (/sh\b|bash|zsh/.test(l)) return shRefs; return null; }
+
+function buildGraph(files) {
+  var paths = Object.keys(files).filter(function (p) { return isTextPath(p) && !IGNORE_RE.test(p) && (files[p] || '').slice(0, 4000).indexOf('\u0000') < 0; });
+  var fileSet = new Set(paths);
+  var byBase = new Map();
+  paths.forEach(function (p) { var b = baseOf(p); (byBase.get(b) || byBase.set(b, []).get(b)).push(p); });
+  var pyIndex = new Map();
+  paths.forEach(function (p) {
+    if (extOf(p) !== 'py') return;
+    var mod = p.replace(/\.py$/, '').replace(/\/__init__$/, '').split('/').join('.');
+    if (!pyIndex.has(mod)) pyIndex.set(mod, p);
+    ['src.', 'lib.'].forEach(function (r) { if (mod.indexOf(r) === 0 && !pyIndex.has(mod.slice(r.length))) pyIndex.set(mod.slice(r.length), p); });
+  });
+  var pyTops = new Set(Array.from(pyIndex.keys()).map(function (k) { return k.split('.')[0]; }));
+  var goModule = null;
+  paths.forEach(function (p) { if (/(^|\/)go\.mod$/.test(p)) { var m = /^\s*module\s+(\S+)/m.exec(files[p] || ''); if (m && (!goModule || dirOf(p).length < goModule.dir.length)) goModule = { name: m[1], dir: dirOf(p) }; } });
+  var goDirs = new Map();
+  paths.forEach(function (p) { if (extOf(p) === 'go' && !/_test\.go$/.test(p)) { var d = dirOf(p); (goDirs.get(d) || goDirs.set(d, []).get(d)).push(p); } });
+
+  var nodes = new Map(), edges = new Map(), missing = [], unknownFiles = [], unknownTotal = 0, builtinCount = 0;
+  function addNode(id, kind, label, group, sub) { if (!nodes.has(id)) nodes.set(id, { id: id, kind: kind, label: label, group: group, sub: sub || null, unknown: 0 }); return nodes.get(id); }
+  function addEdge(a, b, how) {
+    if (a === b) return; var k = a + '\u0000' + b;
+    var e = edges.get(k);
+    if (!e) edges.set(k, { from: a, to: b, how: how || 'imports' });
+    else if (e.how === 'mentions' && how !== 'mentions') e.how = how;
+  }
+  function useExt(from, id, label, sub, how) { addNode('pkg:' + id, 'package', label, 'outside', sub); addEdge(from, 'pkg:' + id, how || 'uses'); }
+  function usePkg(from, name, how) { useExt(from, name, name, 'package', how || 'imports'); }
+  function probe(base, extra) {
+    var tries = [base];
+    (extra || ['.js', '.mjs', '.cjs', '.jsx', '.ts', '.tsx', '.mts', '.vue', '.svelte']).forEach(function (e) { tries.push(base + e); });
+    if (!extra) ['.js', '.ts', '.tsx', '.jsx', '.mjs'].forEach(function (e) { tries.push(base + '/index' + e); });
+    if (/\.js$/.test(base)) { tries.push(base.replace(/\.js$/, '.ts'), base.replace(/\.js$/, '.tsx')); }
+    for (var i = 0; i < tries.length; i++) { var n = normPath(tries[i]); if (fileSet.has(n)) return n; }
+    return null;
+  }
+  paths.forEach(function (p) {
+    var k = kindOf(p);
+    addNode(p, 'file', baseOf(p), p.indexOf('/') >= 0 ? p.split('/')[0] : '(root)', k);
+  });
+
+  paths.forEach(function (p) {
+    var src = files[p] || '', dir = dirOf(p);
+    var reader = readerFor(p) || shebangReader(src);
+    if (reader && !readerFor(p)) nodes.get(p).sub = 'script';
+    var r = reader ? reader(src, p) : { refs: [], unknown: 0 };
+    nodes.get(p).unknown = r.unknown; unknownTotal += r.unknown; if (r.unknown) unknownFiles.push(p);
+    var pathHit = function (ref) {
+      var spec = ref.spec.split('?')[0].split('#')[0];
+      if (!spec) return null;
+      var exts = ref.exts || [''];
+      var hit = null;
+      if (spec.charAt(0) === '/') hit = probe(spec, exts);
+      else {
+        hit = probe(dir + '/' + spec, exts);
+        if (!hit && (ref.root || ref.alsoRoot)) hit = probe(spec, exts);
+        if (!hit && ref.alsoInclude) hit = probe('include/' + spec, exts) || probe('src/' + spec, exts);
+      }
+      return hit;
+    };
+    r.refs.forEach(function (ref) {
+      if (ref.t === 'ext') { useExt(p, ref.id, ref.label, ref.sub, ref.how); return; }
+      if (ref.t === 'pkg') { usePkg(p, ref.name, ref.how); return; }
+      if (ref.t === 'path') {
+        var h = pathHit(ref);
+        if (h) addEdge(p, h, ref.how);
+        else if (ref.how !== 'links' && ref.how !== 'copies' && !/\*/.test(ref.spec) && !missing.some(function (x) { return x.from === p && x.spec === ref.spec; })) missing.push({ from: p, spec: ref.spec });
+        return;
+      }
+      if (ref.t === 'web') {
+        var w = ref.spec.split('?')[0].split('#')[0];
+        if (!w || /^(data|blob|mailto|tel):/i.test(w)) return;
+        if (/^(https?:)?\/\//i.test(w)) { useExt(p, 'cdn:' + cdnName(w), cdnName(w) + ' (CDN)', 'cdn', 'loads'); return; }
+        var wh = w.charAt(0) === '/' ? probe(w, ['']) : (probe(dir + '/' + w, ['']) || probe(dir + '/' + w));
+        if (wh) addEdge(p, wh, ref.how); else if (isTextPath(w) && !/\.(png|jpe?g|gif|svg|webp|ico|woff2?|ttf|otf|mp[34]|webm)$/i.test(w)) missing.push({ from: p, spec: w });
+        return;
+      }
+      if (ref.t === 'js') {
+        var spec = ref.spec.split('?')[0].split('#')[0];
+        if (!spec) return;
+        if (/^(https?:)?\/\//i.test(spec)) { useExt(p, 'cdn:' + cdnName(spec), cdnName(spec) + ' (CDN)', 'cdn', 'loads'); return; }
+        if (/^(data|blob):/i.test(spec)) return;
+        if (spec.indexOf('node:') === 0 || BUILTINS.has(spec.split('/')[0])) { builtinCount++; return; }
+        var hp = null;
+        if (spec.charAt(0) === '.') hp = probe(dir + '/' + spec);
+        else if (spec.charAt(0) === '/') hp = probe(spec);
+        else if (/^[@~#]\//.test(spec)) { var rest = spec.slice(2); hp = probe('src/' + rest) || probe(rest); }
+        else { usePkg(p, pkgName(spec)); return; }
+        if (hp) addEdge(p, hp, ref.how); else missing.push({ from: p, spec: spec });
+        return;
+      }
+      if (ref.t === 'py') {
+        var pkgParts = p.replace(/\.py$/, '').split('/').slice(0, -1), full;
+        if (ref.dots > 0) {
+          if (ref.dots - 1 > pkgParts.length) return;
+          full = pkgParts.slice(0, pkgParts.length - (ref.dots - 1)).concat(ref.mod ? ref.mod.split('.') : []).join('.');
+        } else full = ref.mod;
+        if (!full) return;
+        var anyHit = false;
+        ref.names.forEach(function (nm) { if (pyIndex.has(full + '.' + nm)) { addEdge(p, pyIndex.get(full + '.' + nm), 'imports'); anyHit = true; } });
+        if (pyIndex.has(full)) { addEdge(p, pyIndex.get(full), 'imports'); return; }
+        if (anyHit) return;
+        var parts = full.split('.'), found = null;
+        for (var i = parts.length - 1; i > 0; i--) { var kk = parts.slice(0, i).join('.'); if (pyIndex.has(kk)) { found = pyIndex.get(kk); break; } }
+        if (found) { addEdge(p, found, 'imports'); return; }
+        if (ref.dots > 0 || pyTops.has(parts[0])) { missing.push({ from: p, spec: (ref.dots ? new Array(ref.dots + 1).join('.') : '') + ref.mod }); return; }
+        if (PY_STD.has(parts[0])) { builtinCount++; return; }
+        usePkg(p, parts[0]);
+        return;
+      }
+      if (ref.t === 'rsmod') {
+        var stem = baseOf(p).replace(/\.rs$/, '');
+        var mdir = /^(mod|lib|main)$/.test(stem) ? dir : (dir ? dir + '/' : '') + stem;
+        var mh = probe(mdir + '/' + ref.name, ['.rs']) || probe(mdir + '/' + ref.name + '/mod', ['.rs']);
+        if (mh) addEdge(p, mh, 'imports'); else missing.push({ from: p, spec: 'mod ' + ref.name });
+        return;
+      }
+      if (ref.t === 'rsuse') {
+        var seg = ref.path.split('::');
+        if (/^(std|core|alloc|self|super)$/.test(seg[0])) { builtinCount++; return; }
+        if (seg[0] === 'crate') {
+          var srcRoot = p.indexOf('src/') >= 0 ? p.slice(0, p.indexOf('src/') + 4) : '';
+          for (var j = seg.length; j > 1; j--) { var rp = srcRoot + seg.slice(1, j).join('/'); var rh = probe(rp, ['.rs']) || probe(rp + '/mod', ['.rs']); if (rh) { addEdge(p, rh, 'imports'); return; } }
+          return;
+        }
+        if (/^[a-z_][a-z0-9_]*$/.test(seg[0]) && seg.length > 1) usePkg(p, seg[0].replace(/_/g, '-'));
+        return;
+      }
+      if (ref.t === 'gopkg') {
+        var gp = ref.path;
+        if (goModule && (gp === goModule.name || gp.indexOf(goModule.name + '/') === 0)) {
+          var gd = normPath((goModule.dir ? goModule.dir + '/' : '') + gp.slice(goModule.name.length));
+          var list = goDirs.get(gd) || [];
+          if (list.length) list.forEach(function (f) { addEdge(p, f, 'imports'); }); else missing.push({ from: p, spec: gp });
+          return;
+        }
+        if (gp.split('/')[0].indexOf('.') < 0) { builtinCount++; return; }
+        usePkg(p, gp.split('/').slice(0, 3).join('/'));
+        return;
+      }
+      if (ref.t === 'rbreq') {
+        var rh2 = probe(dir + '/' + ref.spec, ['.rb']) || probe('lib/' + ref.spec, ['.rb']);
+        if (rh2) addEdge(p, rh2, 'imports'); else usePkg(p, ref.spec.split('/')[0]);
+        return;
+      }
+      if (ref.t === 'jvm') {
+        var jp = ref.name.split('.').join('/'), jh = null;
+        paths.forEach(function (f) { if (!jh && /\.(java|kt|kts|scala)$/.test(f) && f.replace(/\.(java|kt|kts|scala)$/, '').slice(-jp.length) === jp) jh = f; });
+        if (jh) { addEdge(p, jh, 'imports'); return; }
+        if (/^(java|javax|kotlin|scala|android|jdk|sun)\./.test(ref.name)) { builtinCount++; return; }
+        usePkg(p, ref.name.split('.').slice(0, 2).join('.'));
+      }
+    });
+
+    // Mentions: a file naming another file of this repo (docs, configs, scripts, code alike).
+    var tokRe = /(?:\.{0,2}\/)?[\w\-\/.]*[\w\-]\.[A-Za-z][A-Za-z0-9]{0,7}\b|\b(?:LICENSE|LICENCE|NOTICE|README|CHANGELOG|SECURITY|CONTRIBUTING|Makefile|Dockerfile|Procfile)\b/g;
+    var seen = new Set();
+    each(tokRe, src, function (m) {
+      var tok = m[0].replace(/[.,;:)]+$/, '');
+      if (seen.has(tok)) return; seen.add(tok);
+      var target = null;
+      if (tok.indexOf('/') >= 0) target = probe(tok.charAt(0) === '/' ? tok : dir + '/' + tok, ['']) || probe(tok.replace(/^\.?\//, ''), ['']);
+      if (!target) {
+        var cands = byBase.get(baseOf(tok));
+        if (cands) target = cands.length === 1 ? cands[0] : (cands.filter(function (c) { return dirOf(c) === dir; })[0] || cands.filter(function (c) { return dirOf(c) === ''; })[0] || null);
+      }
+      if (target && target !== p) addEdge(p, target, 'mentions');
+    });
+  });
+
+  var declared = { js: new Set() };
+  paths.forEach(function (p) {
+    if (/(^|\/)package\.json$/i.test(p)) { try { var j = JSON.parse(files[p]); Object.keys(j.dependencies || {}).forEach(function (d) { declared.js.add(d); }); } catch (e) {} }
+  });
+  var unusedDeps = Array.from(declared.js).filter(function (d) { return !nodes.has('pkg:' + d); });
+  return { nodes: Array.from(nodes.values()), edges: Array.from(edges.values()), missing: missing, unknownTotal: unknownTotal, unknownFiles: unknownFiles, builtinCount: builtinCount, unusedDeps: unusedDeps };
+}
+
+function linkUp(g) {
+  var byId = new Map(g.nodes.map(function (n) { return [n.id, n]; }));
+  g.nodes.forEach(function (n) { n.out = []; n.inn = []; });
+  g.edges.forEach(function (e) { byId.get(e.from).out.push(e.to); byId.get(e.to).inn.push(e.from); });
+  return byId;
+}
+function rippleFrom(ids, byId) {
+  var depth = new Map(), q = [];
+  ids.forEach(function (id) { if (byId.has(id)) { depth.set(id, 0); q.push(id); } });
+  for (var h = 0; h < q.length; h++) { var id = q[h], d = depth.get(id); byId.get(id).inn.forEach(function (up) { if (!depth.has(up)) { depth.set(up, d + 1); q.push(up); } }); }
+  return depth;
+}
+var ENTRY_RE = /(^|\/)(index|main|app|server|cli|setup|manage|__main__|__init__|conftest|sw|service-worker|worker|mod|lib|[^\/]*\.config|[^\/]*\.test|[^\/]*\.spec|test_[^\/]*|[^\/]*_test)\.[^.\/]+$|\.html?$|(^|\/)(tests?|__tests__|spec|examples?|scripts|docs|bin|cmd)\//i;
+// ===== CORE END =====
+
+var SAMPLE = {
+  'index.html': '<!doctype html><html><head><script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script></head><body><script type="module" src="js/app.js"><\/script></body></html>',
+  'sw.js': "importScripts('js/sw-cache.js');\nself.addEventListener('fetch', e => {});",
+  'js/sw-cache.js': 'const CACHE = "v1";',
+  'js/app.js': "import { render } from './ui/render.js';\nimport { store } from './store.js';\nimport { api } from './api/client.js';\nimport { route } from './router.js';\nnavigator.serviceWorker.register('/sw.js');\nroute(location.hash);",
+  'js/router.js': "import home from './ui/pages/home.js';\nimport settings from './ui/pages/settings.js';\nexport async function route(name){ const page = await import(`./ui/pages/${name}.js`); }",
+  'js/store.js': "import { get, set } from 'idb-keyval';\nimport { emit } from './utils/events.js';\nexport const store = {};",
+  'js/api/client.js': "import { token } from './auth.js';\nimport { retry } from '../utils/retry.js';\nexport const api = {};",
+  'js/api/auth.js': "import { store } from '../store.js';\nexport const token = () => store.token;",
+  'js/ui/render.js': "import { fmt } from '../utils/format.js';\nexport function render(){}",
+  'js/ui/pages/home.js': "import { render } from '../render.js';\nimport { fmt } from '../../utils/format.js';\nimport dayjs from 'dayjs';\nexport default {};",
+  'js/ui/pages/settings.js': "import { render } from '../render.js';\nimport { store } from '../../store.js';\nexport default {};",
+  'js/ui/pages/billing.js': "import { render } from '../render.js';\nimport { api } from '../../api/client.js';\nexport default {};",
+  'js/utils/format.js': "import dayjs from 'dayjs';\nexport const fmt = d => dayjs(d).format('MMM D');",
+  'js/utils/retry.js': 'export const retry = fn => fn();',
+  'js/utils/events.js': 'export const emit = () => {};',
+  'js/legacy/old-chart.js': "import Chart from 'chart.js/auto';\nimport { fmt } from '../utils/format.js';",
+  'js/utils/theme.js': "import { store } from '../store.js';\nimport './missing-colors.js';",
+  'package.json': JSON.stringify({ name: 'sample-pwa', dependencies: { dayjs: '^1.11.0', 'idb-keyval': '^6.2.0', 'chart.js': '^4.4.0', lodash: '^4.17.21' } })
+};
+
+// ===== UI =====
+var $ = function (s) { return document.querySelector(s); };
+var el = function (tag, attrs, kids) {
+  var e = document.createElement(tag);
+  if (attrs) Object.keys(attrs).forEach(function (k) { if (k === 'text') e.textContent = attrs[k]; else if (k.indexOf('on') === 0) e.addEventListener(k.slice(2), attrs[k]); else e.setAttribute(k, attrs[k]); });
+  (kids || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+  return e;
+};
+var GROUP_COLORS = ['#6BBFB0', '#8C7CF0', '#7FB2E5', '#9BD48A', '#D9C6A5', '#5FD3E6', '#C9A0DC', '#B5C46A', '#A3A9C9'];
+var PKG_COLOR = '#F2C14E', BREAK = '#FF7A59', TEAL = '#6BBFB0';
+var S = { g: null, byId: null, nodes: [], edges: [], removed: new Set(), depth: new Map(), maxDepth: 0, rippleT: 0, selected: null, hover: null, view: { x: 0, y: 0, k: 1 }, touched: false, alpha: 0, dirty: true, meta: {}, groupColor: {}, labelSet: new Set() };
+
+function status(msg, pct, err) {
+  var st = $('#status'); st.style.display = 'block'; st.className = err ? 'err' : '';
+  st.querySelector('.msg').textContent = msg;
+  st.querySelector('.bar').style.display = pct == null ? 'none' : 'block';
+  if (pct != null) st.querySelector('.bar i').style.width = Math.round(pct * 100) + '%';
+}
+function parseRepo(str) {
+  var s = str.trim().replace(/\.git$/, '').replace(/^https?:\/\//, '').replace(/^www\./, '');
+  s = s.replace(/^github\.com\//, '');
+  var p = s.split('/').filter(Boolean);
+  if (p.length < 1 || !/^[\w.-]+$/.test(p[0])) return null;
+  if (p.length === 1) return { owner: p[0], repo: null, branch: null };
+  var out = { owner: p[0], repo: p[1], branch: null };
+  if (p[2] === 'tree' && p[3]) out.branch = p.slice(3).join('/');
+  return out;
+}
+function gh(url, token, raw) {
+  var h = { Accept: raw ? 'application/vnd.github.raw' : 'application/vnd.github+json' };
+  if (token) h.Authorization = 'Bearer ' + token;
+  return fetch(url, { headers: h }).then(function (r) {
+    if (r.status === 403 || r.status === 429) throw new Error('GitHub’s free limit is about 60 lookups an hour from your connection. Add a token below, or try again later.');
+    if (r.status === 404) throw new Error('Repo not found. If it’s private, add a token below.');
+    if (!r.ok) throw new Error('GitHub answered ' + r.status + '.');
+    return raw ? r.text() : r.json();
+  });
+}
+function pool(items, n, fn, onStep) {
+  var i = 0, done = 0;
+  return new Promise(function (resolve) {
+    if (!items.length) return resolve();
+    function next() {
+      if (i >= items.length) return;
+      var it = items[i++];
+      fn(it).catch(function () {}).then(function () { done++; onStep(done); if (done === items.length) resolve(); else next(); });
+    }
+    for (var k = 0; k < Math.min(n, items.length); k++) next();
+  });
+}
+function pickPaths(list) {
+  var picked = list.filter(function (f) { return wanted(f.path, f.size); });
+  var manifests = picked.filter(function (f) { return MANIFEST_RE.test(f.path); });
+  var src = picked.filter(function (f) { return !MANIFEST_RE.test(f.path); }).sort(function (a, b) { return (KIND_RANK[kindOf(a.path)] || 0) - (KIND_RANK[kindOf(b.path)] || 0); });
+  var capped = src.length > MAX_FILES;
+  return { list: manifests.concat(src.slice(0, MAX_FILES)), capped: capped, total: src.length };
+}
+
+function loadGitHub(input, token) {
+  var r = parseRepo(input);
+  if (!r) return Promise.reject(new Error('That doesn’t look like a GitHub link. Try github.com/owner/repo, or github.com/owner for all their repos'));
+  if (!r.repo) return loadAccount(r.owner, token);
+  var api = 'https://api.github.com/repos/' + r.owner + '/' + r.repo;
+  status('Finding the repo…', 0.02);
+  return gh(api, token).then(function (info) {
+    var branch = r.branch || info.default_branch;
+    status('Reading the file list…', 0.06);
+    return gh(api + '/git/trees/' + encodeURIComponent(branch) + '?recursive=1', token).then(function (tree) {
+      var blobs = tree.tree.filter(function (t) { return t.type === 'blob'; });
+      var pick = pickPaths(blobs);
+      var files = {};
+      return pool(pick.list, 8, function (f) {
+        var url = token ? api + '/contents/' + f.path.split('/').map(encodeURIComponent).join('/') + '?ref=' + tree.sha
+                        : 'https://raw.githubusercontent.com/' + r.owner + '/' + r.repo + '/' + tree.sha + '/' + f.path.split('/').map(encodeURIComponent).join('/');
+        return (token ? gh(url, token, true) : fetch(url).then(function (x) { if (!x.ok) throw 0; return x.text(); })).then(function (t) { files[f.path] = t; });
+      }, function (d) { status('Reading files… ' + d + ' of ' + pick.list.length, 0.08 + 0.85 * d / pick.list.length); }).then(function () {
+        return { files: files, meta: { name: r.owner + '/' + r.repo, ref: branch + ' @ ' + tree.sha.slice(0, 7), url: 'https://github.com/' + r.owner + '/' + r.repo, commit: tree.sha, capped: pick.capped, total: pick.total, truncated: tree.truncated, kind: 'github' } };
+      });
+    });
+  }).catch(function (e) {
+    if (e instanceof TypeError) throw new Error('This page can’t reach GitHub from here (previews block outside requests). Open a .zip of the repo instead — on GitHub: Code → Download ZIP — or host this page on your own site.');
+    throw e;
+  });
+}
+function loadZip(file) {
+  if (!window.JSZip) return Promise.reject(new Error('The zip reader didn’t load. Check your connection and refresh.'));
+  status('Opening ' + file.name + '…', 0.03);
+  return JSZip.loadAsync(file).then(function (zip) {
+    var entries = [];
+    zip.forEach(function (path, entry) { if (!entry.dir) entries.push({ path: path, entry: entry, size: entry._data && entry._data.uncompressedSize }); });
+    var first = entries.length && entries[0].path.split('/')[0];
+    var common = first && entries.every(function (e) { return e.path.indexOf(first + '/') === 0; });
+    entries.forEach(function (e) { e.path = common ? e.path.slice(first.length + 1) : e.path; });
+    var pick = pickPaths(entries);
+    var files = {};
+    return pool(pick.list, 8, function (f) { return f.entry.async('string').then(function (t) { files[f.path] = t; }); },
+      function (d) { status('Reading files… ' + d + ' of ' + pick.list.length, 0.05 + 0.88 * d / pick.list.length); })
+      .then(function () { return { files: files, meta: { name: (common ? first : file.name).replace(/\.zip$/, ''), ref: 'from ' + file.name, capped: pick.capped, total: pick.total, kind: 'zip' } }; });
+  });
+}
+
+// ----- whole account: every repo becomes one object -----
+function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function repoPattern(name) {
+  var parts = name.split(/[-_.]+/).filter(Boolean);
+  if (parts.length > 1) return new RegExp('(^|[^\\w])' + parts.map(escRe).join('[-_\\s.]?') + '(?![\\w])', 'i');
+  if (name.length >= 3 && /[A-Z]/.test(name)) return new RegExp('(^|[^\\w])' + escRe(name) + '(?![\\w])');
+  if (name.length >= 6) return new RegExp('(^|[^\\w])' + escRe(name) + '(?![\\w])', 'i');
+  return null;
+}
+function normDep(n) { return n.trim().toLowerCase().replace(/_/g, '-'); }
+function manifestInfo(f) {
+  var own = [], deps = [], m;
+  if (f['package.json']) { try { var j = JSON.parse(f['package.json']); if (j.name) own.push(j.name); ['dependencies', 'devDependencies', 'peerDependencies'].forEach(function (k) { Object.keys(j[k] || {}).forEach(function (d) { deps.push(d); }); }); } catch (e) {} }
+  if (f['requirements.txt']) f['requirements.txt'].split('\n').forEach(function (l) { var n = l.trim().split(/[<>=!~\[;\s@]/)[0]; if (n && !/^[#-]/.test(n)) deps.push(n); });
+  if (f['pyproject.toml']) {
+    var t = f['pyproject.toml'];
+    if ((m = /^\s*name\s*=\s*["']([^"']+)["']/m.exec(t))) own.push(m[1]);
+    if ((m = /\bdependencies\s*=\s*\[([\s\S]*?)\]/.exec(t))) each(/["']\s*([A-Za-z0-9_.\-]+)/g, m[1], function (k) { deps.push(k[1]); });
+  }
+  if (f['Cargo.toml']) {
+    var c = f['Cargo.toml'];
+    if ((m = /\[package\][^\[]*?^\s*name\s*=\s*"([^"]+)"/m.exec(c))) own.push(m[1]);
+    each(/^\[(?:dev-|build-)?dependencies\]([\s\S]*?)(?=^\[|$(?![\s\S]))/gm, c, function (k) { each(/^\s*([A-Za-z0-9_\-]+)\s*=/gm, k[1], function (d) { deps.push(d[1]); }); });
+  }
+  if (f['go.mod']) {
+    var g = f['go.mod'];
+    if ((m = /^\s*module\s+(\S+)/m.exec(g))) own.push(m[1]);
+    each(/^\s*(?:require\s+)?([a-z0-9.\-]+\.[a-z]+\/[^\s]+)\s+v[\d.]/gm, g, function (k) { deps.push(k[1]); });
+  }
+  return { own: own.map(normDep), deps: deps.map(normDep).filter(Boolean) };
+}
+function loadAccount(owner, token) {
+  status('Finding ' + owner + '’s repos…', 0.03);
+  return gh('https://api.github.com/users/' + encodeURIComponent(owner) + '/repos?per_page=100&sort=pushed', token).then(function (list) {
+    if (!Array.isArray(list) || !list.length) throw new Error(owner + ' has no public repos to map.');
+    var forks = list.filter(function (r) { return r.fork; }).length;
+    var repos = list.filter(function (r) { return !r.fork; }).slice(0, 80);
+    var FILES = ['README.md', 'readme.md', 'package.json', 'requirements.txt', 'pyproject.toml', 'Cargo.toml', 'go.mod'];
+    var jobs = [];
+    repos.forEach(function (r) { r._f = {}; FILES.forEach(function (f) { jobs.push({ r: r, f: f }); }); });
+    return pool(jobs, 10, function (j) {
+      if (j.f === 'readme.md' && j.r._f['README.md']) return Promise.resolve();
+      return fetch('https://raw.githubusercontent.com/' + owner + '/' + encodeURIComponent(j.r.name) + '/HEAD/' + j.f)
+        .then(function (x) { return x.ok ? x.text() : null; }).then(function (t) { if (t != null) j.r._f[j.f] = t.slice(0, 300000); });
+    }, function (d) { status('Reading ' + repos.length + ' repos… ' + Math.round(d / jobs.length * 100) + '%', 0.06 + 0.88 * d / jobs.length); })
+    .then(function () { return { graph: buildAccountGraph(owner, repos), meta: { name: owner, ref: repos.length + ' repos' + (forks ? ' · ' + forks + ' forks left out' : ''), url: 'https://github.com/' + owner, kind: 'account', owner: owner } }; });
+  }).catch(function (e) {
+    if (e instanceof TypeError) throw new Error('This page can’t reach GitHub from here. Open it from altru.dev/apps/ripple/try instead.');
+    throw e;
+  });
+}
+function buildAccountGraph(owner, repos) {
+  var nodes = [], edges = new Map();
+  var addEdge = function (a, b, how) { if (a === b) return; var k = a + '\u0000' + b, e = edges.get(k); if (!e) edges.set(k, { from: a, to: b, how: how }); else if (e.how === 'mentions') e.how = how; };
+  var first = {}; repos.forEach(function (r) { var t = r.name.split(/[-_.]/)[0].toLowerCase(); first[t] = (first[t] || 0) + 1; });
+  var byName = new Map(), ownPkg = new Map();
+  repos.forEach(function (r) {
+    var fam = r.name.split(/[-_.]/)[0];
+    var group = first[fam.toLowerCase()] > 1 ? fam + ' family' : (r.language || 'Other');
+    var info = manifestInfo(r._f);
+    r._info = info;
+    info.own.forEach(function (o) { ownPkg.set(o, r.name); });
+    byName.set(r.name.toLowerCase(), r.name);
+    nodes.push({ id: 'repo:' + r.name, kind: 'file', sub: 'repo', label: r.name, group: group, unknown: 0,
+      repo: { desc: r.description || '', lang: r.language || '', stars: r.stargazers_count || 0, pushed: (r.pushed_at || '').slice(0, 10), url: r.html_url, archived: r.archived, deps: info.deps.length, size: r.size || 0 } });
+  });
+  var depUse = new Map();
+  repos.forEach(function (r) {
+    var me = 'repo:' + r.name, text = (r.description || '') + '\n' + (r._f['README.md'] || r._f['readme.md'] || '');
+    var linkRe = new RegExp('github\\.com/' + escRe(owner) + '/([\\w.-]+)', 'gi');
+    each(linkRe, text, function (m) { var n = byName.get(m[1].replace(/\.git$/, '').toLowerCase()); if (n) addEdge(me, 'repo:' + n, 'links'); });
+    repos.forEach(function (o) { if (o === r) return; var re = o._pat === undefined ? (o._pat = repoPattern(o.name)) : o._pat; if (re && re.test(text)) addEdge(me, 'repo:' + o.name, 'mentions'); });
+    r._info.deps.forEach(function (d) {
+      var hit = ownPkg.get(d);
+      var gm = /github\.com\/([\w.-]+)\/([\w.-]+)/i.exec(d);
+      if (!hit && gm && gm[1].toLowerCase() === owner.toLowerCase()) hit = byName.get(gm[2].toLowerCase());
+      if (hit && hit !== r.name) { addEdge(me, 'repo:' + hit, 'imports'); return; }
+      if (!depUse.has(d)) depUse.set(d, new Set()); depUse.get(d).add(r.name);
+    });
+  });
+  var shared = Array.from(depUse.entries()).filter(function (e) { return e[1].size >= 2; }).sort(function (a, b) { return b[1].size - a[1].size; }).slice(0, 24);
+  shared.forEach(function (e) {
+    nodes.push({ id: 'pkg:' + e[0], kind: 'package', sub: 'package', label: e[0], group: 'outside', unknown: 0 });
+    e[1].forEach(function (rn) { addEdge('repo:' + rn, 'pkg:' + e[0], 'imports'); });
+  });
+  return { nodes: nodes, edges: Array.from(edges.values()), missing: [], unknownTotal: 0, unknownFiles: [], builtinCount: 0, unusedDeps: [], sharedCount: shared.length };
+}
+
+// ----- graph setup -----
+function start(res) {
+  status('Mapping connections…', 0.96);
+  var g = res.graph || buildGraph(res.files);
+  if (res.meta.kind === 'account') S.lastAccount = res;
+  S.unit = res.meta.kind === 'account' ? 'repos' : 'files';
+  if (!g.nodes.length) throw new Error('No readable text files found in this repo (only images or binaries?).');
+  S.g = g; S.byId = linkUp(g); S.meta = res.meta; S.removed = new Set(); S.depth = new Map(); S.selected = null;
+  var groups = {};
+  g.nodes.forEach(function (n) { if (n.kind === 'file') groups[n.group] = (groups[n.group] || 0) + 1; });
+  var order = Object.keys(groups).sort(function (a, b) { return groups[b] - groups[a]; });
+  S.groupColor = {};
+  order.forEach(function (gname, i) { S.groupColor[gname] = i < GROUP_COLORS.length - 1 ? GROUP_COLORS[i] : GROUP_COLORS[GROUP_COLORS.length - 1]; });
+  S.groupOrder = order;
+  var anchors = {}, gl = order.concat(['outside']);
+  gl.forEach(function (gname, i) { var a = i / gl.length * Math.PI * 2; var R = gname === 'outside' ? 340 : 200 + 40 * (i % 2); anchors[gname] = { x: Math.cos(a) * R, y: Math.sin(a) * R }; });
+  g.nodes.forEach(function (n) {
+    var an = anchors[n.group]; n.ax = an.x; n.ay = an.y;
+    n.x = an.x + (Math.random() - .5) * 120; n.y = an.y + (Math.random() - .5) * 120; n.vx = 0; n.vy = 0;
+    if (n.sub === 'repo') { n.ax *= 1.6; n.ay *= 1.6; }
+    var base = g.nodes.length < 40 ? 6 : g.nodes.length < 150 ? 4 : 3;
+    if (n.sub === 'repo') { n.r = 8 + Math.min(12, Math.log(1 + (n.repo.size || 0)) * 1.4) + Math.sqrt(n.inn.length * 2 + n.out.length) * 2.2; n.color = S.groupColor[n.group]; return; }
+    n.r = n.kind === 'package' ? base + 1 + Math.sqrt(n.inn.length) * 2.2 : base + Math.sqrt(n.inn.length) * 2.4;
+    n.color = n.kind === 'package' ? PKG_COLOR : S.groupColor[n.group];
+  });
+  S.nodes = g.nodes; S.edges = g.edges.map(function (e) { return { s: S.byId.get(e.from), t: S.byId.get(e.to), how: e.how }; });
+  S.how = new Map(); g.edges.forEach(function (e) { S.how.set(e.from + '\u0000' + e.to, e.how); });
+  var ranked = g.nodes.slice().sort(function (a, b) { return b.inn.length - a.inn.length; });
+  S.labelSet = new Set(g.nodes.length <= 40 ? g.nodes.map(function (n) { return n.id; }) : ranked.slice(0, Math.min(14, Math.ceil(g.nodes.length / 6))).filter(function (n) { return n.inn.length > 0; }).map(function (n) { return n.id; }));
+  if (g.nodes.length <= 40) S.labelSet = new Set(g.nodes.map(function (n) { return n.id; }));
+  if (S.unit === 'repos') S.labelSet = new Set(g.nodes.filter(function (n) { return n.sub === 'repo' || n.inn.length > 2; }).map(function (n) { return n.id; }));
+  S.alpha = 1; S.touched = false; S.dirty = true;
+  $('#status').style.display = 'none';
+  $('#app').style.display = 'block';
+  renderHead(); renderInsights(); renderLegend(); renderPkgs(); renderSel(); renderImpact();
+  resize();
+  $('#app').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function tick() {
+  var N = S.nodes, n = N.length, a = S.alpha, i, j;
+  for (i = 0; i < n; i++) {
+    var p = N[i];
+    for (j = i + 1; j < n; j++) {
+      var q = N[j], dx = q.x - p.x, dy = q.y - p.y, d2 = dx * dx + dy * dy + 0.01;
+      if (d2 > 62500) continue;
+      var f = (p.sub === 'repo' || q.sub === 'repo' ? 900 : 260) * a / d2; p.vx -= dx * f; p.vy -= dy * f; q.vx += dx * f; q.vy += dy * f;
+    }
+  }
+  S.edges.forEach(function (e) {
+    var dx = e.t.x - e.s.x, dy = e.t.y - e.s.y, d = Math.sqrt(dx * dx + dy * dy) || 1;
+    var L = e.t.kind === 'package' ? 90 : e.s.sub === 'repo' ? 140 : 42, f = (d - L) / d * 0.05 * a;
+    e.s.vx += dx * f; e.s.vy += dy * f; e.t.vx -= dx * f; e.t.vy -= dy * f;
+  });
+  for (i = 0; i < n; i++) {
+    var m = N[i];
+    m.vx += (m.ax - m.x) * 0.006 * a; m.vy += (m.ay - m.y) * 0.006 * a;
+    if (m.fixed) { m.vx = m.vy = 0; continue; }
+    m.vx *= 0.62; m.vy *= 0.62;
+    m.x += m.vx; m.y += m.vy;
+  }
+}
+
+// ----- canvas -----
+var cv = $('#cv'), ctx = cv.getContext('2d'), W = 0, H = 0, DPR = 1;
+function resize() {
+  var r = $('#stage').getBoundingClientRect(); DPR = window.devicePixelRatio || 1;
+  W = r.width; H = r.height; cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  if (!S.touched) fit(); S.dirty = true;
+}
+window.addEventListener('resize', function () { if (S.g) resize(); });
+function fit() {
+  if (!S.nodes.length || !W) return;
+  var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  S.nodes.forEach(function (n) { x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y); x1 = Math.max(x1, n.x); y1 = Math.max(y1, n.y); });
+  var k = Math.min(W / (x1 - x0 + 120), H / (y1 - y0 + 140), 2.2);
+  S.view.k = k; S.view.x = W / 2 - (x0 + x1) / 2 * k; S.view.y = H / 2 - (y0 + y1) / 2 * k;
+}
+function shapePath(n) {
+  var r = n.r;
+  if (n.kind === 'package') { ctx.moveTo(n.x, n.y - r * 1.25); ctx.lineTo(n.x + r * 1.25, n.y); ctx.lineTo(n.x, n.y + r * 1.25); ctx.lineTo(n.x - r * 1.25, n.y); ctx.closePath(); }
+  else if (n.sub === 'repo') { var q = r * 0.95; if (ctx.roundRect) ctx.roundRect(n.x - q, n.y - q, q * 2, q * 2, q * 0.45); else ctx.rect(n.x - q, n.y - q, q * 2, q * 2); }
+  else if (n.sub === 'doc') { var s = r * 0.9; if (ctx.roundRect) ctx.roundRect(n.x - s, n.y - s * 1.2, s * 2, s * 2.4, s * 0.35); else ctx.rect(n.x - s, n.y - s * 1.2, s * 2, s * 2.4); }
+  else if (n.sub === 'config' || n.sub === 'workflow') { var t = r * 1.35; ctx.moveTo(n.x, n.y - t); ctx.lineTo(n.x + t * 0.95, n.y + t * 0.6); ctx.lineTo(n.x - t * 0.95, n.y + t * 0.6); ctx.closePath(); }
+  else if (n.sub === 'script') { var hx = r * 1.15; for (var i = 0; i < 6; i++) { var a = Math.PI / 3 * i + Math.PI / 6; ctx[i ? 'lineTo' : 'moveTo'](n.x + Math.cos(a) * hx, n.y + Math.sin(a) * hx); } ctx.closePath(); }
+  else ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+}
+var SUB_LABEL = { repo: 'repository', code: 'code', page: 'web page', style: 'stylesheet', script: 'script', workflow: 'automation workflow', config: 'config', doc: 'document', package: 'outside package', tool: 'command-line tool', action: 'GitHub Action', image: 'container image', cdn: 'file from a CDN' };
+function brokenNow(n, t) { if (!S.depth.has(n.id)) return false; return t - S.rippleT >= S.depth.get(n.id) * 140; }
+function draw(t) {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#14111F'; ctx.fillRect(0, 0, W, H);
+  var v = S.view; ctx.translate(v.x, v.y); ctx.scale(v.k, v.k);
+  var anyRemoved = S.removed.size > 0, sel = S.selected ? S.byId.get(S.selected) : null;
+  var lw = 1 / v.k;
+  ctx.lineWidth = lw;
+  S.edges.forEach(function (e) {
+    var b = anyRemoved && brokenNow(e.s, t) && brokenNow(e.t, t);
+    var hi = sel && (e.s === sel || e.t === sel);
+    if (hi) { ctx.strokeStyle = e.s === sel ? 'rgba(107,191,176,.95)' : 'rgba(242,193,78,.9)'; ctx.lineWidth = lw * 2; }
+    else if (b) { ctx.strokeStyle = 'rgba(255,122,89,.6)'; ctx.lineWidth = lw * 1.5; }
+    else { ctx.strokeStyle = anyRemoved || sel ? 'rgba(185,179,201,.07)' : 'rgba(185,179,201,.2)'; ctx.lineWidth = lw; }
+    ctx.setLineDash(e.how === 'mentions' || e.how === 'links' ? [4 / v.k, 4 / v.k] : []);
+    ctx.beginPath(); ctx.moveTo(e.s.x, e.s.y); ctx.lineTo(e.t.x, e.t.y); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+  var neigh = new Set();
+  if (sel) { sel.out.forEach(function (id) { neigh.add(id); }); sel.inn.forEach(function (id) { neigh.add(id); }); }
+  S.nodes.forEach(function (n) {
+    var isRem = S.removed.has(n.id), isB = anyRemoved && brokenNow(n, t);
+    var dim = (anyRemoved && !isB) || (sel && n !== sel && !neigh.has(n.id) && !isB);
+    ctx.globalAlpha = dim ? 0.28 : 1;
+    ctx.fillStyle = isB ? BREAK : n.color;
+    ctx.beginPath();
+    shapePath(n);
+    if (isRem) { ctx.fillStyle = '#14111F'; ctx.fill(); ctx.strokeStyle = '#F4F1EC'; ctx.lineWidth = lw * 2; ctx.stroke(); var s = n.r * .6; ctx.beginPath(); ctx.moveTo(n.x - s, n.y - s); ctx.lineTo(n.x + s, n.y + s); ctx.moveTo(n.x + s, n.y - s); ctx.lineTo(n.x - s, n.y + s); ctx.stroke(); }
+    else ctx.fill();
+    if (n === sel) { ctx.globalAlpha = 1; ctx.strokeStyle = '#F4F1EC'; ctx.lineWidth = lw * 2; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 4 / v.k, 0, Math.PI * 2); ctx.stroke(); }
+    if (isB && !isRem) {
+      var age = t - S.rippleT - S.depth.get(n.id) * 140;
+      if (age < 700) { ctx.globalAlpha = 1 - age / 700; ctx.strokeStyle = BREAK; ctx.lineWidth = lw * 2; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + age / 700 * 22, 0, Math.PI * 2); ctx.stroke(); }
+    }
+  });
+  ctx.globalAlpha = 1;
+  ctx.font = '500 ' + (12 / v.k) + 'px "DM Sans", sans-serif';
+  ctx.textBaseline = 'middle';
+  S.nodes.forEach(function (n) {
+    var show = S.labelSet.has(n.id) || n === sel || n.id === S.hover || S.removed.has(n.id) || (sel && neigh.has(n.id) && neigh.size < 30);
+    if (!show) return;
+    var tx = n.x + n.r + 5 / v.k, ty = n.y;
+    ctx.lineWidth = 3 / v.k; ctx.strokeStyle = '#14111F'; ctx.strokeText(n.label, tx, ty);
+    ctx.fillStyle = (S.removed.size && !S.depth.has(n.id)) ? 'rgba(244,241,236,.5)' : '#F4F1EC'; ctx.fillText(n.label, tx, ty);
+  });
+}
+function loop(t) {
+  if (S.g) {
+    if (S.alpha > 0.02) { tick(); S.alpha *= 0.986; if (!S.touched) fit(); S.dirty = true; }
+    if (S.removed.size && t - S.rippleT < (S.maxDepth + 2) * 140 + 700) S.dirty = true;
+    if (S.dirty) { draw(t); S.dirty = false; }
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function toWorld(sx, sy) { return { x: (sx - S.view.x) / S.view.k, y: (sy - S.view.y) / S.view.k }; }
+function hit(sx, sy) {
+  var w = toWorld(sx, sy), best = null, bd = 1e9;
+  S.nodes.forEach(function (n) { var dx = n.x - w.x, dy = n.y - w.y, d = Math.sqrt(dx * dx + dy * dy), lim = n.r + 6 / S.view.k; if (d < lim && d < bd) { bd = d; best = n; } });
+  return best;
+}
+var drag = null;
+cv.addEventListener('pointerdown', function (e) {
+  var r = cv.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top, n = hit(sx, sy);
+  drag = { sx: sx, sy: sy, n: n, vx: S.view.x, vy: S.view.y, moved: false };
+  if (n) { n.fixed = true; }
+  cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove', function (e) {
+  var r = cv.getBoundingClientRect(), sx = e.clientX - r.left, sy = e.clientY - r.top;
+  if (drag) {
+    if (Math.abs(sx - drag.sx) + Math.abs(sy - drag.sy) > 4) drag.moved = true;
+    if (drag.moved) {
+      S.touched = true;
+      if (drag.n) { var w = toWorld(sx, sy); drag.n.x = w.x; drag.n.y = w.y; S.alpha = Math.max(S.alpha, 0.15); }
+      else { S.view.x = drag.vx + sx - drag.sx; S.view.y = drag.vy + sy - drag.sy; }
+      S.dirty = true;
+    }
+    return;
+  }
+  var n = hit(sx, sy), id = n ? n.id : null;
+  if (id !== S.hover) { S.hover = id; S.dirty = true; }
+  var tip = $('#tip');
+  if (n) {
+    tip.style.display = 'block';
+    tip.innerHTML = '';
+    tip.appendChild(el('b', { text: n.kind === 'package' || n.repo ? n.label : n.id }));
+    tip.appendChild(el('span', { text: (SUB_LABEL[n.sub] || n.sub || '') + ' · used by ' + n.inn.length + ' · uses ' + n.out.length }));
+    tip.style.left = Math.min(sx + 14, W - 290) + 'px'; tip.style.top = (sy + 14) + 'px';
+    cv.style.cursor = 'pointer';
+  } else { tip.style.display = 'none'; cv.style.cursor = 'grab'; }
+});
+cv.addEventListener('pointerup', function () {
+  if (drag) { if (drag.n) drag.n.fixed = false; if (!drag.moved) select(drag.n ? drag.n.id : null); }
+  drag = null;
+});
+cv.addEventListener('pointerleave', function () { $('#tip').style.display = 'none'; if (S.hover) { S.hover = null; S.dirty = true; } });
+cv.addEventListener('wheel', function (e) {
+  e.preventDefault();
+  var r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0015));
+}, { passive: false });
+function zoomAt(sx, sy, f) {
+  var k = Math.max(0.15, Math.min(6, S.view.k * f)); f = k / S.view.k;
+  S.view.x = sx - (sx - S.view.x) * f; S.view.y = sy - (sy - S.view.y) * f; S.view.k = k; S.touched = true; S.dirty = true;
+}
+$('#zin').onclick = function () { zoomAt(W / 2, H / 2, 1.3); };
+$('#zout').onclick = function () { zoomAt(W / 2, H / 2, 1 / 1.3); };
+$('#zfit').onclick = function () { S.touched = false; fit(); S.dirty = true; };
+function centerOn(n) { S.touched = true; var k = Math.max(S.view.k, 1.1); S.view.k = k; S.view.x = W / 2 - n.x * k; S.view.y = H / 2 - n.y * k; S.dirty = true; }
+
+// ----- state changes -----
+function select(id) { S.selected = id; S.dirty = true; renderSel(); }
+function setRemoved(id, off) {
+  if (off) S.removed.add(id); else S.removed.delete(id);
+  S.depth = rippleFrom(Array.from(S.removed), S.byId);
+  S.maxDepth = 0; S.depth.forEach(function (d) { if (d > S.maxDepth) S.maxDepth = d; });
+  S.rippleT = performance.now(); S.dirty = true;
+  renderImpact(); renderPkgs(); renderSel();
+}
+
+// ----- panels -----
+function fileCount() { return S.nodes.filter(function (n) { return n.kind === 'file'; }).length; }
+function renderHead() {
+  $('#repoName').textContent = S.meta.name;
+  var back = $('#backBtn'); if (back) back.remove();
+  if (S.lastAccount && S.meta.kind !== 'account') {
+    $('#repoName').parentNode.insertBefore(el('button', { id: 'backBtn', class: 'btn ghost', type: 'button', style: 'min-height:40px;padding:8px 14px', onclick: function () { run(Promise.resolve(S.lastAccount)); } }, ['← All ' + S.lastAccount.meta.name + ' repos']), $('#repoName'));
+  }
+  var bits = [S.meta.ref];
+  if (S.meta.capped) bits.push('first ' + MAX_FILES + ' of ' + S.meta.total + ' source files');
+  if (S.meta.truncated) bits.push('GitHub sent a partial file list');
+  $('#repoMeta').textContent = bits.join(' · ');
+}
+function insight(k, v, d, chips) {
+  var c = el('div', { class: 'ins' }, [el('span', { class: 'k', text: k }), el('span', { class: 'v', text: String(v) }), d ? el('span', { class: 'd', text: d }) : null]);
+  if (chips && chips.length) {
+    var box = el('div', { class: 'chips' });
+    chips.slice(0, 4).forEach(function (ch) { box.appendChild(ch.id ? el('button', { class: 'chip', type: 'button', title: ch.title || ch.label, onclick: function () { var n = S.byId.get(ch.id); select(ch.id); centerOn(n); } }, [ch.label]) : el('span', { class: 'chip', title: ch.label }, [ch.label])); });
+    if (chips.length > 4) box.appendChild(el('span', { class: 'chip', text: '+' + (chips.length - 4) + ' more' }));
+    c.appendChild(box);
+  }
+  return c;
+}
+function renderInsights() {
+  var g = S.g, box = $('#insights'); box.innerHTML = '';
+  if (S.unit === 'repos') {
+    var rs = S.nodes.filter(function (n) { return n.sub === 'repo'; });
+    var rr = g.edges.filter(function (e) { return e.to.indexOf('repo:') === 0; });
+    box.appendChild(insight('Mapped', rs.length + ' repos', rr.length + ' links between them · ' + (g.sharedCount || 0) + ' shared outside packages'));
+    var hubR = rs.slice().sort(function (a, b) { return b.inn.length - a.inn.length; }).filter(function (n) { return n.inn.length > 0; });
+    if (hubR.length) box.appendChild(insight('Most relied on', hubR[0].label, 'Other repos point to it ' + hubR[0].inn.length + ' time' + (hubR[0].inn.length === 1 ? '' : 's'), hubR.slice(0, 6).map(function (n) { return { id: n.id, label: n.label + ' · ' + n.inn.length }; })));
+    var lone = rs.filter(function (n) { return !n.inn.some(function (i) { return i.indexOf('repo:') === 0; }) && !n.out.some(function (o) { return o.indexOf('repo:') === 0; }); });
+    box.appendChild(insight('Standalone', lone.length, lone.length ? 'Repos no other repo mentions or uses, and that name none' : 'Every repo is connected', lone.map(function (n) { return { id: n.id, label: n.label }; })));
+    var fams = {}; rs.forEach(function (n) { fams[n.group] = (fams[n.group] || 0) + 1; });
+    var famList = Object.keys(fams).filter(function (k) { return / family$/.test(k); }).sort(function (a, b) { return fams[b] - fams[a]; });
+    if (famList.length) box.appendChild(insight('Families', famList.length, 'Repos sharing a name prefix are coloured together', famList.map(function (k) { return { label: k.replace(/ family$/, '') + ' · ' + fams[k] }; })));
+    return;
+  }
+  var files = S.nodes.filter(function (n) { return n.kind === 'file'; });
+  var pkgs = S.nodes.filter(function (n) { return n.kind === 'package'; });
+  var cnt = {}; files.forEach(function (n) { cnt[n.sub] = (cnt[n.sub] || 0) + 1; });
+  var mix = ['code', 'page', 'script', 'style', 'workflow', 'config', 'doc'].filter(function (k) { return cnt[k]; }).map(function (k) { return cnt[k] + ' ' + (k === 'doc' ? 'docs' : k === 'code' ? 'code' : k === 'config' ? 'config' : k + (cnt[k] > 1 ? 's' : '')); }).join(' · ');
+  box.appendChild(insight('Mapped', (files.length + pkgs.length) + ' objects', mix + (pkgs.length ? ' · ' + pkgs.length + ' outside' : '') + ' — ' + g.edges.length + ' links'));
+  var hubs = files.slice().sort(function (a, b) { return b.inn.length - a.inn.length; }).filter(function (n) { return n.inn.length > 1; });
+  if (hubs.length) {
+    var top = hubs[0], reach = rippleFrom([top.id], S.byId).size - 1;
+    box.appendChild(insight('Most relied on', top.label, 'If it broke, ' + reach + ' file' + (reach === 1 ? '' : 's') + ' would feel it', hubs.slice(0, 5).map(function (n) { return { id: n.id, label: n.label + ' · ' + n.inn.length, title: n.id }; })));
+  }
+  var orphans = files.filter(function (n) { return n.inn.length === 0 && /^(code|script|style)$/.test(n.sub) && !ENTRY_RE.test(n.id); });
+  box.appendChild(insight('Nothing uses these', orphans.length, orphans.length ? 'Leftovers, or entry points we didn’t recognise' : 'Every file is reached by another', orphans.map(function (n) { return { id: n.id, label: n.label, title: n.id }; })));
+  if (pkgs.length) box.appendChild(insight('Relies on outside', pkgs.length, 'Packages, tools, actions and images this repo needs', pkgs.slice().sort(function (a, b) { return b.inn.length - a.inn.length; }).map(function (n) { return { id: n.id, label: n.label, title: SUB_LABEL[n.sub] || '' }; })));
+  if (g.unusedDeps.length) box.appendChild(insight('Installed, never imported', g.unusedDeps.length, 'Listed in package.json but no file imports them', g.unusedDeps.map(function (d) { return { label: d }; })));
+  if (g.missing.length) box.appendChild(insight('Can’t find', g.missing.length, 'References to files that aren’t in the repo (or are generated at build time)', g.missing.map(function (m) { return { id: m.from, label: m.spec, title: m.from + ' → ' + m.spec }; })));
+  if (g.unknownTotal) box.appendChild(insight('Loaded by name at runtime', g.unknownTotal, 'The map can’t see these links — check them by hand', g.unknownFiles.map(function (id) { return { id: id, label: baseOf(id), title: id }; })));
+}
+function renderLegend() {
+  var lg = $('#legend'); lg.innerHTML = '';
+  S.groupOrder.slice(0, 7).forEach(function (gname) { lg.appendChild(el('span', {}, [el('i', { style: 'background:' + S.groupColor[gname] }), gname])); });
+  lg.appendChild(el('span', {}, [el('i', { style: 'background:' + PKG_COLOR + ';border-radius:2px;transform:rotate(45deg)' }), 'outside']));
+  if (S.unit === 'repos') {
+    var rl = document.createElement('span');
+    rl.innerHTML = '<svg width="230" height="12" viewBox="0 0 230 12" aria-hidden="true" style="flex:none"><g fill="#B9B3C9" font-size="11" font-family="DM Sans, sans-serif"><rect x="0.5" y="0.5" width="11" height="11" rx="3"/><text x="16" y="10">repo</text><line x1="52" y1="6" x2="68" y2="6" stroke="#B9B3C9"/><text x="72" y="10">uses / links</text><line x1="140" y1="6" x2="156" y2="6" stroke="#B9B3C9" stroke-dasharray="3 3"/><text x="160" y="10">mentions</text></g></svg>';
+    rl.setAttribute('aria-label', 'Rounded square: repo. Solid line: uses or links. Dashed line: mentions');
+    lg.appendChild(rl);
+    lg.appendChild(el('span', {}, [el('i', { style: 'background:' + BREAK }), 'would break']));
+    return;
+  }
+  var shp = document.createElement('span');
+  shp.innerHTML = '<svg width="250" height="12" viewBox="0 0 250 12" aria-hidden="true" style="flex:none"><g fill="#B9B3C9" font-size="11" font-family="DM Sans, sans-serif"><circle cx="5" cy="6" r="4.5"/><text x="13" y="10">code</text><polygon points="49,6 51.5,1.7 56.5,1.7 59,6 56.5,10.3 51.5,10.3"/><text x="62" y="10">script</text><polygon points="103,1 108,10.5 98,10.5"/><text x="111" y="10">config</text><rect x="148" y="0.5" width="7" height="11" rx="2"/><text x="158" y="10">doc</text></g><line x1="183" y1="6" x2="197" y2="6" stroke="#B9B3C9" stroke-dasharray="3 3"/><text x="200" y="10" fill="#B9B3C9" font-size="11" font-family="DM Sans, sans-serif">mention</text></svg>';
+  shp.setAttribute('aria-label', 'Shapes: circle code, hexagon script, triangle config, page doc, dashed line mention');
+  lg.appendChild(shp);
+  lg.appendChild(el('span', {}, [el('i', { style: 'background:' + BREAK }), 'would break']));
+}
+function renderPkgs() {
+  var f = ($('#pq').value || '').toLowerCase();
+  var pk = S.nodes.filter(function (n) { return n.kind === 'package' && n.label.toLowerCase().indexOf(f) >= 0; }).sort(function (a, b) { return b.inn.length - a.inn.length; });
+  var list = $('#pkgList'); list.innerHTML = '';
+  if (!pk.length) list.appendChild(el('span', { class: 'hint', text: f ? 'No package matches.' : 'This repo imports no outside packages.' }));
+  pk.forEach(function (n) {
+    var on = !S.removed.has(n.id);
+    var reach = rippleFrom([n.id], S.byId).size - 1;
+    list.appendChild(el('div', { class: 'item' }, [
+      el('button', { class: 'link', type: 'button', style: 'flex:1;min-width:0;padding:0', onclick: function () { select(n.id); centerOn(n); } }, [
+        el('span', { class: 't' }, [el('b', { text: n.label }), el('span', { text: (SUB_LABEL[n.sub] || '') + ' · used by ' + n.inn.length + ' · reaches ' + reach + ' ' + (S.unit === 'repos' ? 'repo' : 'file') + (reach === 1 ? '' : 's') })])
+      ]),
+      el('button', { class: 'sw', type: 'button', role: 'switch', 'aria-checked': on ? 'true' : 'false', 'aria-label': (on ? 'Remove ' : 'Restore ') + n.label, onclick: function () { setRemoved(n.id, on); } }, [el('i')])
+    ]));
+  });
+}
+function renderSel() {
+  var p = $('#selPane'), n = S.selected ? S.byId.get(S.selected) : null;
+  if (!n) { p.hidden = true; return; }
+  p.hidden = false; p.innerHTML = '';
+  var reach = rippleFrom([n.id], S.byId).size - 1, off = S.removed.has(n.id);
+  p.appendChild(el('h3', { text: n.label }));
+  p.appendChild(el('span', { class: 'path', text: n.kind === 'package' ? 'Outside · ' + (SUB_LABEL[n.sub] || '') : n.repo ? (n.repo.lang || 'repository') + (n.group !== (n.repo.lang || 'Other') ? ' · ' + n.group : '') + (n.repo.archived ? ' · archived' : '') : n.id + ' · ' + (SUB_LABEL[n.sub] || '') }));
+  p.appendChild(el('div', { class: 'nums' }, [
+    el('span', {}, [el('b', { text: String(n.inn.length) }), 'used by']),
+    n.kind === 'file' ? el('span', {}, [el('b', { text: String(n.out.length) }), 'uses']) : null,
+    el('span', {}, [el('b', { text: String(reach) }), 'would feel it']),
+    n.repo ? el('span', {}, [el('b', { text: '★ ' + n.repo.stars }), n.repo.pushed]) : null
+  ]));
+  if (n.repo) {
+    if (n.repo.desc) p.appendChild(el('span', { class: 'hint', text: n.repo.desc }));
+    p.appendChild(el('div', { class: 'row' }, [
+      el('button', { class: 'btn teal', type: 'button', onclick: function () { run(loadGitHub(S.meta.owner + '/' + n.label, $('#token').value.trim())); } }, ['Map its files']),
+      el('a', { class: 'btn ghost', href: n.repo.url, target: '_blank', rel: 'noopener', style: 'display:inline-flex;align-items:center;text-decoration:none' }, ['Open on GitHub'])
+    ]));
+  }
+  p.appendChild(el('div', { class: 'row' }, [
+    el('button', { class: off ? 'btn teal' : 'btn primary', type: 'button', onclick: function () { setRemoved(n.id, !off); } }, [off ? 'Bring it back' : 'Switch it off']),
+    el('button', { class: 'btn ghost', type: 'button', onclick: function () { select(null); } }, ['Close'])
+  ]));
+  if (n.inn.length) {
+    var grp = el('div', { class: 'grp' }, [el('div', { text: 'Used by' })]);
+    n.inn.slice(0, 12).forEach(function (id) { grp.appendChild(el('button', { class: 'link', type: 'button', onclick: function () { select(id); centerOn(S.byId.get(id)); } }, [S.byId.get(id).label + (S.unit === 'repos' ? '' : ' (' + id + ')') + ' · ' + (S.how.get(id + '\u0000' + n.id) || 'uses')])); });
+    if (n.inn.length > 12) grp.appendChild(el('span', { class: 'hint', text: '+' + (n.inn.length - 12) + ' more' }));
+    p.appendChild(grp);
+  }
+}
+function renderImpact() {
+  var p = $('#impactPane'), ban = $('#banner'); ban.innerHTML = '';
+  if (!S.removed.size) { p.hidden = true; return; }
+  p.hidden = false; p.innerHTML = '';
+  var total = fileCount(), broken = [];
+  S.depth.forEach(function (d, id) { var n = S.byId.get(id); if (n.kind === 'file' && !S.removed.has(id)) broken.push(n); });
+  var pct = total ? Math.round(broken.length / total * 100) : 0;
+  p.appendChild(el('h3', { text: 'The ripple' }));
+  var big = el('div', { class: 'big' }); big.appendChild(el('b', { text: String(broken.length) })); big.appendChild(document.createTextNode(' of ' + total + ' ' + S.unit));
+  p.appendChild(big);
+  p.appendChild(el('span', { class: 'hint', text: pct + (S.unit === 'repos' ? '% of these repos rely on it, directly or through another repo. Closest first.' : '% of the repo would break or need updating. Closest hits first.') }));
+  ban.appendChild(el('div', {}, ['Switched off ' + S.removed.size + ' → ', el('b', { text: broken.length + ' ' + S.unit }), ' affected']));
+  var chips = el('div', { class: 'row', style: 'gap:6px' });
+  S.removed.forEach(function (id) { var n = S.byId.get(id); chips.appendChild(el('button', { class: 'chip', type: 'button', title: 'Bring back ' + n.label, onclick: function () { setRemoved(id, false); } }, ['✕ ' + n.label])); });
+  chips.appendChild(el('button', { class: 'chip', type: 'button', onclick: function () { S.removed.clear(); setRemoved('__none__', false); } }, ['Reset all']));
+  p.appendChild(chips);
+  var byG = {};
+  broken.sort(function (a, b) { return S.depth.get(a.id) - S.depth.get(b.id); }).forEach(function (n) { (byG[n.group] = byG[n.group] || []).push(n); });
+  var list = el('div', { class: 'list' });
+  Object.keys(byG).forEach(function (gname) {
+    var grp = el('div', { class: 'grp' }, [el('div', { text: gname + ' · ' + byG[gname].length })]);
+    byG[gname].slice(0, 15).forEach(function (n) { grp.appendChild(el('button', { class: 'link', type: 'button', onclick: function () { select(n.id); centerOn(n); } }, [(n.repo ? n.label : n.id) + (S.depth.get(n.id) === 1 ? '  · direct' : '')])); });
+    if (byG[gname].length > 15) grp.appendChild(el('span', { class: 'hint', text: '+' + (byG[gname].length - 15) + ' more' }));
+    list.appendChild(grp);
+  });
+  p.appendChild(list);
+}
+$('#pq').addEventListener('input', renderPkgs);
+$('#q').addEventListener('input', function () {
+  var q = this.value.trim().toLowerCase(), out = $('#results'); out.innerHTML = '';
+  if (!q || !S.g) return;
+  S.nodes.filter(function (n) { return n.id.toLowerCase().indexOf(q) >= 0; }).slice(0, 8).forEach(function (n) {
+    out.appendChild(el('button', { class: 'link', type: 'button', onclick: function () { select(n.id); centerOn(n); } }, [n.kind === 'package' ? n.label + ' (' + (SUB_LABEL[n.sub] || 'outside') + ')' : n.repo ? n.label : n.id]));
+  });
+});
+
+// ----- engine model export -----
+function engineModel() {
+  var pk = S.nodes.filter(function (n) { return n.kind === 'package'; });
+  var leverIds = new Set(pk.map(function (n) { return n.id; })); S.removed.forEach(function (id) { leverIds.add(id); });
+  return {
+    engine: 'ripple/0.1',
+    source: { type: S.meta.kind, name: S.meta.name, url: S.meta.url || null, commit: S.meta.commit || null },
+    nodes: S.nodes.map(function (n) { return { id: n.id, kind: n.kind, type: n.sub, group: n.group }; }),
+    edges: S.g.edges.map(function (e) { return { from: e.from, to: e.to, kind: e.how }; }),
+    levers: Array.from(leverIds).map(function (id) { var n = S.byId.get(id); return { id: 'remove:' + id, label: 'Remove ' + n.label, type: 'switch', target: id }; }),
+    effects: [{ when: 'lever.on', rule: 'reach', from: 'lever.target', direction: 'upstream', mark: 'breaks' }],
+    snapshot: { removed: Array.from(S.removed), breaks: Array.from(S.depth.keys()).filter(function (id) { return !S.removed.has(id); }) },
+    notes: { missing: S.g.missing, runtimeLoaded: S.g.unknownFiles, unusedDependencies: S.g.unusedDeps }
+  };
+}
+$('#exportBtn').onclick = function () { $('#mtext').value = JSON.stringify(engineModel(), null, 2); $('#mmsg').textContent = ''; $('#modal').style.display = 'flex'; $('#mcopy').focus(); };
+$('#mclose').onclick = function () { $('#modal').style.display = 'none'; };
+$('#modal').addEventListener('keydown', function (e) { if (e.key === 'Escape') $('#modal').style.display = 'none'; });
+$('#mcopy').onclick = function () {
+  var t = $('#mtext');
+  try { navigator.clipboard.writeText(t.value).then(function () { $('#mmsg').textContent = 'Copied.'; }, function () { t.select(); $('#mmsg').textContent = 'Selected — press Ctrl/Cmd+C.'; }); }
+  catch (e) { t.select(); $('#mmsg').textContent = 'Selected — press Ctrl/Cmd+C.'; }
+};
+
+// ----- inputs -----
+function run(p) {
+  $('#app').style.display = 'none';
+  p.then(start).catch(function (e) { status(e.message || 'Something went wrong reading that repo.', null, true); });
+}
+$('#form').addEventListener('submit', function (e) {
+  e.preventDefault();
+  var u = $('#url').value; if (!u.trim()) { $('#url').focus(); return; }
+  run(loadGitHub(u, $('#token').value.trim()));
+});
+$('#sample').onclick = function () { run(Promise.resolve({ files: SAMPLE, meta: { name: 'Sample PWA', ref: 'built-in example', kind: 'sample' } })); };
+$('#zip').addEventListener('change', function () { if (this.files[0]) run(loadZip(this.files[0])); this.value = ''; });
+var dragDepth = 0;
+window.addEventListener('dragenter', function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') >= 0) { dragDepth++; $('#drop').style.display = 'flex'; } });
+window.addEventListener('dragleave', function () { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) $('#drop').style.display = 'none'; });
+window.addEventListener('dragover', function (e) { e.preventDefault(); });
+window.addEventListener('drop', function (e) {
+  e.preventDefault(); dragDepth = 0; $('#drop').style.display = 'none';
+  var f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f && /\.zip$/i.test(f.name)) run(loadZip(f)); else if (f) status('Drop a .zip of the repo (on GitHub: Code → Download ZIP).', null, true);
+});
+</script>
+</body>
+</html>
