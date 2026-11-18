@@ -1809,7 +1809,6 @@ $('#q').addEventListener('input', function () {
   });
 });
 
-// ----- engine model export -----
 // ----- ghost links (Phase 4) -----
 function readmeSnippet(n, list) {
   var lines = ['## Related projects', ''];
@@ -2028,6 +2027,7 @@ function drawTicks() {
   }
 }
 
+// ----- engine model export -----
 function engineModel() {
   var pk = S.nodes.filter(function (n) { return n.kind === 'package'; });
   var leverIds = new Set(pk.map(function (n) { return n.id; })); S.removed.forEach(function (id) { leverIds.add(id); });

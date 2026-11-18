@@ -1,6 +1,6 @@
 # Ripple — Roadmap
 
-Last updated: 2026-11-18 · Current version: **v0.8 (live)** — Phases 0–5 done, 21 languages
+Last updated: 2026-11-18 · Current version: **v0.8.1 (live)** · handover: [HANDOVER.md](HANDOVER.md) — Phases 0–5 done, 21 languages
 
 Ripple's idea in one line: *code becomes visual objects; flip a switch, see the consequence.*
 The goal of the next versions is to make the map feel **alive** (time, health), **meaningful** (purpose, ghost links) and **actionable** (what to fix next) — and to put it on the altru.dev homepage as a living portfolio.
@@ -27,7 +27,7 @@ The goal of the next versions is to make the map feel **alive** (time, health), 
 | Zoom inside a file (Phase 5) | ✅ v0.8: keep zooming into a code file (or double-click it, or *Look inside*) and it opens as a map of its functions, methods and classes; zoom far out (or *← All files*) to go back. Readers for JS/TS (+Vue/Svelte script), Python, Go, Rust, PHP, GDScript, Ruby: definitions, body extents (braces / indentation), calls, functions passed by name (`items.map(row)`), class use, methods → their class (Go: receiver type). Calls into files it imports (only when exactly one defines the name) show as ◆; files that call in show as boxes. Switching a function off ripples to its callers, in and out of the file. Real code: 203 files across 6 languages read in 110 ms (worst 9 ms for a 123 KB file) |
 | Readability + resize | ✅ v0.4: numbers and headings in DM Sans (Syne kept only for the logo); map labels 13px semibold; the map follows window resizes and keeps your zoom/position centred |
 | Hosting | ✅ altru.dev/apps/ripple/try (static), product page altru.dev/apps/ripple (featured) |
-| Tests | ✅ `tests/core.test.js` (Node, no deps). Browser tests were run ad hoc with Playwright — not yet in repo |
+| Tests | ✅ `tests/core.test.js` (Node, no deps, 15 tests) + `tests/browser.check.js` (Playwright, 13 checks incl. no-scroll across 40 states). See [HANDOVER.md](HANDOVER.md) §5 |
 
 First real-data run (altrudev, 52 repos): 11 repo-to-repo links, 37 standalone repos, 6 families, shared packages `cryptography` ×4, `react` ×2, `jsonschema` ×2.
 
@@ -120,6 +120,6 @@ UI rule (applies to every phase): *simple on the surface, meaningful detail on d
 
 1. One `index.html`, vanilla JS, no build step, no frameworks. CDN only for JSZip.
 2. Keep the CORE section pure (no DOM) so `tests/core.test.js` can run it in Node.
-3. Every change: run `node tests/core.test.js`, then a headless browser check (sample, a zip, a real repo, an account).
+3. Every change: run `node tests/core.test.js`, then `node tests/browser.check.js`, then a real-data check after deploying (see HANDOVER.md).
 4. Deploy = copy `index.html` to the live path, back up the previous file first, verify the live file's SHA-256 matches.
 5. Plain language in the UI. No jargon on the surface.
