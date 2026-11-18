@@ -1,6 +1,6 @@
 # Ripple — Roadmap
 
-Last updated: 2026-11-18 · Current version: **v0.6 (live)** — Phases 0–3 done, 21 languages
+Last updated: 2026-11-18 · Current version: **v0.7 (live)** — Phases 0–4 done, 21 languages
 
 Ripple's idea in one line: *code becomes visual objects; flip a switch, see the consequence.*
 The goal of the next versions is to make the map feel **alive** (time, health), **meaningful** (purpose, ghost links) and **actionable** (what to fix next) — and to put it on the altru.dev homepage as a living portfolio.
@@ -23,6 +23,7 @@ The goal of the next versions is to make the map feel **alive** (time, health), 
 | Time (Phase 1) | ✅ v0.4: time bar under the map. Account: slider from first repo to today, repos appear at birth (teal ring), glow = pushed in the last ~month, fade = quiet 6–18 months; Play animates the history. Repo: 1 extra call for the last 100 commits; each commit's changed files light up (1 call per commit, fetched on demand, stops before the visitor's hourly limit runs low); files appear when first added. Example map has a built-in 8-commit history |
 | Health (Phase 2) | ✅ v0.5: ring around every repo/code file — green healthy · amber worth a look · grey quiet — with a one-line reason on hover and in the details. Repos: README, description, license, 10+ open issues/PRs, archived, untouched 1 year+ (no extra calls). Files: a test imports it or matches its name (`foo.test.js`, `test_foo.py`, `foo_test.go`), hub (3+ dependents) without tests, runtime loads. "Needs attention" card → riskiest-first list in the side panel (reach × what's missing). Ring level + reason included in the engine model export |
 | Meaning (Phase 3) | ✅ v0.6: account maps have a *Group by* switch — **Purpose** (default) · Family · Language. Purpose is a deterministic word classifier (9 purposes + Other) over name and topics (×3), description (×2) and README start (×1, code blocks and links ignored); every repo shows what it matched. Group titles drawn on the map; labels never overlap (important ones win, the rest appear on hover/zoom); links between different groups pull gently, a dominant purpose sits in the middle with the others on a wide ring around it, so clusters stay apart. altrudev: 32 agent safety & trust · 7 developer tools · 6 web & apps · 3 games · 2 accessibility · 2 privacy & messaging · 1 money |
+| Ghost links (Phase 4) | ✅ v0.7: faint dotted lines between repos that never reference each other but belong together. In-browser TF-IDF cosine over name, description, topics and README (code blocks, links, filler words and words in >40% of repos ignored) + shared packages + same name family. Each repo keeps its 2 strongest matches; a repo with none gets its single best weaker one; nothing in common → no link. Every suggestion has a reason ("Both talk about gaze, webgazer, aac"). *Suggested links* toggle + card → list; repo details show its suggestions and **Copy README snippet** ("## Related projects" markdown). Included in the engine model as `suggested` edges. altrudev: 54 suggestions, 50 of 53 repos matched in ~40 ms |
 | Readability + resize | ✅ v0.4: numbers and headings in DM Sans (Syne kept only for the logo); map labels 13px semibold; the map follows window resizes and keeps your zoom/position centred |
 | Hosting | ✅ altru.dev/apps/ripple/try (static), product page altru.dev/apps/ripple (featured) |
 | Tests | ✅ `tests/core.test.js` (Node, no deps). Browser tests were run ad hoc with Playwright — not yet in repo |
@@ -78,11 +79,11 @@ UI rule (applies to every phase): *simple on the surface, meaningful detail on d
 - Purpose from repo `topics` + description keywords (deterministic classifier first: agent safety/assurance, accessibility, games, privacy tools, web apps, developer tools, research…). Optional AI labelling later, clearly marked as a guess. *(Not done — the deterministic version reads altrudev well.)*
 - **Done when:** the altrudev map shows readable purpose clusters with a legend, and every label is explainable ("matched: 'assurance', 'agent'").
 
-## Phase 4 — Ghost links (what *should* be connected)
+## Phase 4 — Ghost links (what *should* be connected) — ✅ shipped in v0.7
 
 - Faint dotted lines between repos that never reference each other but clearly belong together: description/README similarity (TF-IDF cosine, in-browser) + shared dependencies + same family.
 - Side panel: "Suggested links" with a one-click **copy README snippet** ("## Related projects …").
-- Optional: suggested file links inside a repo (e.g. a doc that should mention a script).
+- Optional: suggested file links inside a repo (e.g. a doc that should mention a script). *(Not done yet.)*
 - **Done when:** for altrudev it proposes links for most of the 37 standalone repos, each with a stated reason.
 
 ## Phase 5 — Zoom all the way in (semantic zoom)

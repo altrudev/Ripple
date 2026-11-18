@@ -5,7 +5,7 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const script = html.split('<script>\n')[1].split('</script>\n</body>')[0];
 const core = script.split('// ===== CORE START =====')[1].split('// ===== UI =====')[0];
 const R = {};
-new Function('R', core + ';R.buildGraph=buildGraph;R.linkUp=linkUp;R.rippleFrom=rippleFrom;R.SAMPLE=SAMPLE;R.wanted=wanted;R.kindOf=kindOf;R.repoLook=repoLook;R.commitGlow=commitGlow;R.addedTimes=addedTimes;R.DAY=DAY;R.fileHealth=fileHealth;R.repoHealth=repoHealth;R.classifyPurpose=classifyPurpose;')(R);
+new Function('R', core + ';R.buildGraph=buildGraph;R.linkUp=linkUp;R.rippleFrom=rippleFrom;R.SAMPLE=SAMPLE;R.wanted=wanted;R.kindOf=kindOf;R.repoLook=repoLook;R.commitGlow=commitGlow;R.addedTimes=addedTimes;R.DAY=DAY;R.fileHealth=fileHealth;R.repoHealth=repoHealth;R.classifyPurpose=classifyPurpose;R.ghostLinks=ghostLinks;')(R);
 
 let passed = 0;
 function test(name, fn) { try { fn(); passed++; console.log('ok  ', name); } catch (e) { console.error('FAIL', name, '\n     ', e.message); process.exitCode = 1; } }
@@ -172,6 +172,26 @@ test('meaning: purpose guess is deterministic and explains itself', () => {
   assert.strictEqual(R.classifyPurpose('x', '', [], 'one app').label, 'Other', 'a single README word is not enough');
   const code = R.classifyPurpose('x', '', [], '```\ngame game game\n```');
   assert.strictEqual(code.label, 'Other', 'code blocks are ignored');
+});
+
+test('ghost links: similar READMEs pair up, with reasons; linked pairs and unrelated repos do not', () => {
+  const it = (id, text, deps = [], family = null) => ({ id, name: id, text, deps, family });
+  const items = [
+    it('gaze-board', 'eye gaze communication board for nonverbal users, webgazer calibration, aac symbols'),
+    it('aac-kit', 'aac symbols and eye gaze input, webgazer calibration helpers for communication boards'),
+    it('pay-proof', 'signed payment receipts for agents, ledger evidence, wallet', ['cryptography']),
+    it('receipt-spec', 'receipt format specification, ledger evidence and signature verification', ['cryptography']),
+    it('cooking', 'sourdough bread starter feeding schedule and oven temperatures'),
+    it('weather', 'rain radar tiles for coastal kayaking trips'),
+  ];
+  const g = R.ghostLinks(items, new Set());
+  const has = (a, b) => g.find(x => (x.a === a && x.b === b) || (x.a === b && x.b === a));
+  assert(has('gaze-board', 'aac-kit'), 'similar READMEs');
+  assert(/gaze|webgazer|aac|calibration/.test(has('gaze-board', 'aac-kit').why));
+  assert(/cryptography/.test(has('pay-proof', 'receipt-spec').why), 'shared package is a reason');
+  assert(!g.some(x => x.a === 'cooking' || x.b === 'cooking'), 'nothing in common → no made-up link');
+  const linked = R.ghostLinks(items, new Set(['gaze-board\u0000aac-kit']));
+  assert(!linked.find(x => (x.a === 'gaze-board' && x.b === 'aac-kit') || (x.b === 'gaze-board' && x.a === 'aac-kit')), 'already linked → not suggested');
 });
 
 console.log('\n' + passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));

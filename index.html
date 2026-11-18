@@ -106,6 +106,15 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .seg button{border:0;background:transparent;color:var(--text);font:600 13px 'DM Sans',system-ui,sans-serif;padding:5px 11px;border-radius:8px;min-height:32px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--teal);color:var(--navy)}
 .seg button:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+/* ---- Phase 4: ghost links ---- */
+.gtoggle{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);color:var(--text);font:600 13px 'DM Sans',system-ui,sans-serif;padding:5px 11px;border-radius:10px;min-height:38px;cursor:pointer}
+.gtoggle[hidden]{display:none}
+.gtoggle[aria-pressed="false"]{color:var(--muted);background:transparent}
+.gtoggle[aria-pressed="false"] svg{opacity:.35}
+.gtoggle:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.sugg{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left}
+.sugg small,.risk small{color:var(--muted);font-size:12px;white-space:normal;word-break:normal;overflow-wrap:break-word}
+.sugg b,.risk b{word-break:break-word}
 /* ---- Phase 2: health ---- */
 .why{display:flex;align-items:flex-start;gap:6px;margin-top:4px}
 .why i{flex:none;width:9px;height:9px;border-radius:50%;margin-top:4px;border:2px solid currentColor;background:transparent}
@@ -185,6 +194,7 @@ body.has-map #status{margin:0;flex-basis:100%}
   .repohead span{display:none}
   .repohead .seg span{display:none}
   .seg button{padding:5px 8px;font-size:12px}
+  .gtoggle{font-size:0;gap:0;padding:5px 8px}
   .work{position:relative}
   .side{position:absolute;left:0;right:0;bottom:0;flex:none;width:auto;max-height:52px;overflow:hidden;background:var(--navy);border-radius:16px 16px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.45);padding:0 8px 8px;z-index:6;transition:max-height .25s ease}
   .side.open{max-height:62%;overflow-y:auto}
@@ -234,7 +244,7 @@ body.has-map #status{margin:0;flex-basis:100%}
   </div>
 
   <section id="app" aria-label="Repo map">
-    <div class="repohead"><h2 id="repoName"></h2><div class="seg" id="groupBy" role="group" aria-label="Group repos by" hidden><span>Group by</span><button type="button" data-g="purpose">Purpose</button><button type="button" data-g="family">Family</button><button type="button" data-g="language">Language</button></div><span id="repoMeta"></span></div>
+    <div class="repohead"><h2 id="repoName"></h2><div class="seg" id="groupBy" role="group" aria-label="Group repos by" hidden><span>Group by</span><button type="button" data-g="purpose">Purpose</button><button type="button" data-g="family">Family</button><button type="button" data-g="language">Language</button></div><button type="button" class="gtoggle" id="ghostBtn" aria-pressed="true" hidden><svg width="22" height="8" viewBox="0 0 22 8" aria-hidden="true"><line x1="2" y1="4" x2="20" y2="4" stroke="#C9A0DC" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg>Suggested links</button><span id="repoMeta"></span></div>
     <div class="insights" id="insights"></div>
     <div class="work">
       <div class="stage" id="stage">
@@ -802,7 +812,7 @@ var PURPOSES = [
   ['Agent safety & trust', 'agent agents agentic assurance governance governed audit auditing trust trusted verification verifier verify policy policies compliance provenance attestation integrity evidence proof proofs drift guard guardrail guardrails safety authorization accountability oversight federation receipt receipts'],
   ['Privacy & messaging', 'privacy private encrypt encrypted encryption e2e e2ee messenger messaging chat relay anonymous watermark watermarking secure'],
   ['Games', 'game games godot rpg gameplay player players arcade roguelike survival battle battleboard multiplayer puzzle'],
-  ['Accessibility', 'accessibility a11y wcag assistive inclusive'],
+  ['Accessibility', 'accessibility a11y wcag assistive inclusive aac'],
   ['Money & payments', 'payment payments pay finance financial budget budgeting money trading trader defi yield solidity wallet invoice billing'],
   ['AI & models', 'ai llm llms model models inference ml neural prompt prompts gpt embedding embeddings'],
   ['Developer tools', 'cli tool tools terminal devtools visualizer lint linter ci sdk library plugin vscode mcp framework debug debugger ide developer developers git github'],
@@ -820,6 +830,55 @@ function classifyPurpose(name, desc, topics, readme) {
     if (score >= 3 && (!best || score > best.score)) best = { label: p.label, score: score, words: Array.from(hits.entries()).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 3).map(function (e) { return e[0]; }) };
   });
   return best || { label: 'Other', score: 0, words: [] };
+}
+// ----- ghost links (Phase 4) -----
+var STOP = new Set(('the and for with that this from you your are was were will can not but all any its into out our use using used uses run runs running how what when why who which where there here then than them they their these those has have had been being about also just more most only other some such very each per via may must should would could one two three new get set make made like see over under same both well way ' +
+  'repo repos repository project projects code file files readme license mit apache github http https www com org io md doc docs install installation usage example examples build test tests run npm pip yarn node python javascript typescript go rust java src lib main app apps tool tools version release releases feature features support supports ' +
+  'data system systems user users based simple small first open source free api see note notes todo json yaml config default line lines output input value values function functions return returns script scripts page pages work works working write written change changed changes head url define defined upstream valid input home web hub score base external party channel duplicate mismatch current full real live step steps part parts thing things want need needs keep kept start end case cases point points level level public private local remote server client').split(' '));
+function stem(w) { if (w.length < 5) return w; if (/ies$/.test(w)) return w.slice(0, -3) + 'y'; return /[^sui]s$/.test(w) ? w.slice(0, -1) : w; }
+function termsOf(t) { return wordsOf(t).filter(function (w) { return w.length >= 3 && !/^\d+$/.test(w) && !STOP.has(w); }).map(stem); }
+// items: [{ id, name, text (desc/topics/README), deps: [], family }] · linked: Set of 'a\u0000b' (either direction counts).
+// Returns [{ a, b, score, why }] — repos that never reference each other but clearly belong together.
+function ghostLinks(items, linked) {
+  var N = items.length, df = new Map(), vecs = [];
+  items.forEach(function (it) {
+    var tf = new Map();
+    termsOf(it.name + ' ' + it.name).forEach(function (w) { tf.set(w, (tf.get(w) || 0) + 3); });
+    termsOf(it.text).forEach(function (w) { tf.set(w, (tf.get(w) || 0) + 1); });
+    tf.forEach(function (v, w) { df.set(w, (df.get(w) || 0) + 1); });
+    vecs.push(tf);
+  });
+  var maxDf = Math.max(2, Math.floor(N * 0.4));
+  vecs = vecs.map(function (tf) {
+    var v = new Map(), norm = 0;
+    tf.forEach(function (c, w) { var d = df.get(w); if (d < 2 || d > maxDf) return; var x = (1 + Math.log(c)) * Math.log(N / d); v.set(w, x); norm += x * x; });
+    norm = Math.sqrt(norm) || 1; v.forEach(function (x, w) { v.set(w, x / norm); });
+    return v;
+  });
+  var cands = items.map(function () { return []; });
+  for (var i = 0; i < N; i++) for (var j = i + 1; j < N; j++) {
+    var A = items[i], B = items[j];
+    if (linked.has(A.id + '\u0000' + B.id) || linked.has(B.id + '\u0000' + A.id)) continue;
+    var small = vecs[i].size < vecs[j].size ? vecs[i] : vecs[j], big = small === vecs[i] ? vecs[j] : vecs[i], cos = 0, shared = [];
+    small.forEach(function (x, w) { if (big.has(w)) { var c = x * big.get(w); cos += c; shared.push([w, c]); } });
+    var deps = A.deps.filter(function (d) { return B.deps.indexOf(d) >= 0; }), fam = A.family && A.family === B.family;
+    var score = cos + Math.min(3, deps.length) * 0.06 + (fam ? 0.12 : 0);
+    if (score < 0.12) continue;
+    var why = [];
+    shared.sort(function (a, b) { return b[1] - a[1]; });
+    var famW = fam ? new Set(termsOf(A.family)) : null; if (famW) shared = shared.filter(function (e) { return !famW.has(e[0]); });
+    if (shared.length && cos >= 0.08) why.push('Both talk about ' + shared.slice(0, 3).map(function (e) { return e[0]; }).join(', '));
+    if (deps.length) why.push('both use ' + deps.slice(0, 3).join(', '));
+    if (fam) why.push('same ' + A.family + ' family');
+    if (!why.length) continue;
+    var g = { a: A.id, b: B.id, score: Math.round(score * 100) / 100, why: why.join(' · ').replace(/^./, function (c) { return c.toUpperCase(); }) };
+    cands[i].push(g); cands[j].push(g);
+  }
+  // Each repo keeps its two strongest matches (0.16+); a repo with none still gets its single best weaker one (0.12+).
+  var keep = new Set();
+  cands.forEach(function (list) { list.sort(function (x, y) { return y.score - x.score; }).filter(function (g) { return g.score >= 0.16; }).slice(0, 2).forEach(function (g) { keep.add(g); }); });
+  cands.forEach(function (list, i) { var id = items[i].id; if (list.length && !Array.from(keep).some(function (g) { return g.a === id || g.b === id; })) keep.add(list[0]); });
+  return Array.from(keep).sort(function (x, y) { return y.score - x.score; });
 }
 // ===== CORE END =====
 
@@ -855,7 +914,7 @@ var el = function (tag, attrs, kids) {
 };
 var GROUP_COLORS = ['#6BBFB0', '#8C7CF0', '#7FB2E5', '#9BD48A', '#D9C6A5', '#5FD3E6', '#C9A0DC', '#B5C46A', '#A3A9C9'];
 var PKG_COLOR = '#F2C14E', BREAK = '#FF7A59', TEAL = '#6BBFB0';
-var S = { groupBy: 'purpose', g: null, byId: null, nodes: [], edges: [], removed: new Set(), depth: new Map(), maxDepth: 0, rippleT: 0, selected: null, hover: null, view: { x: 0, y: 0, k: 1 }, touched: false, alpha: 0, dirty: true, meta: {}, groupColor: {}, labelSet: new Set() };
+var S = { showGhosts: true, ghosts: [], groupBy: 'purpose', g: null, byId: null, nodes: [], edges: [], removed: new Set(), depth: new Map(), maxDepth: 0, rippleT: 0, selected: null, hover: null, view: { x: 0, y: 0, k: 1 }, touched: false, alpha: 0, dirty: true, meta: {}, groupColor: {}, labelSet: new Set() };
 
 function status(msg, pct, err) {
   var st = $('#status'); st.style.display = 'block'; st.className = err ? 'err' : '';
@@ -1047,7 +1106,13 @@ function buildAccountGraph(owner, repos) {
     nodes.push({ id: 'pkg:' + e[0], kind: 'package', sub: 'package', label: e[0], group: 'outside', unknown: 0 });
     e[1].forEach(function (rn) { addEdge('repo:' + rn, 'pkg:' + e[0], 'imports'); });
   });
-  return { nodes: nodes, edges: Array.from(edges.values()), missing: [], unknownTotal: 0, unknownFiles: [], builtinCount: 0, unusedDeps: [], sharedCount: shared.length };
+  var linked = new Set(Array.from(edges.values()).map(function (e) { return e.from + '\u0000' + e.to; }));
+  var ghosts = ghostLinks(repos.map(function (r) {
+    var fam = r.name.split(/[-_.]/)[0];
+    var rd = (r._f['README.md'] || r._f['readme.md'] || '').replace(/```[\s\S]*?```/g, ' ').replace(/https?:\/\/\S+/g, ' ').slice(0, 6000);
+    return { id: 'repo:' + r.name, name: r.name, text: [r.description, r.description, (r.topics || []).join(' '), (r.topics || []).join(' '), rd].join(' '), deps: r._info.deps.map(normDep), family: first[fam.toLowerCase()] > 1 ? fam : null };
+  }), linked);
+  return { nodes: nodes, edges: Array.from(edges.values()), missing: [], unknownTotal: 0, unknownFiles: [], builtinCount: 0, unusedDeps: [], sharedCount: shared.length, ghosts: ghosts };
 }
 
 // ----- graph setup -----
@@ -1084,6 +1149,7 @@ function setGroupBy(mode) {
 }
 function renderSeg() {
   var sg = $('#groupBy'); sg.hidden = S.unit !== 'repos';
+  var gb = $('#ghostBtn'); gb.hidden = !S.ghosts.length; gb.setAttribute('aria-pressed', S.showGhosts ? 'true' : 'false');
   Array.prototype.forEach.call(sg.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.dataset.g === S.groupBy ? 'true' : 'false'); });
 }
 function start(res) {
@@ -1111,6 +1177,7 @@ function start(res) {
   $('#app').style.display = 'flex';
   document.body.classList.add('has-map');
   setupHealth();
+  S.ghosts = (g.ghosts || []).map(function (x) { return { s: S.byId.get(x.a), t: S.byId.get(x.b), why: x.why, score: x.score }; });
   setupTime(res);
   renderHead(); renderInsights(); renderLegend(); renderPkgs(); renderSel(); renderImpact();
   resize();
@@ -1192,9 +1259,20 @@ function draw(t) {
     ctx.setLineDash(e.how === 'mentions' || e.how === 'links' ? [4 / v.k, 4 / v.k] : []);
     ctx.beginPath(); ctx.moveTo(e.s.x, e.s.y); ctx.lineTo(e.t.x, e.t.y); ctx.stroke();
   });
+  if (S.showGhosts && S.ghosts.length && !anyRemoved) {
+    ctx.setLineDash([2 / v.k, 6 / v.k]); ctx.lineCap = 'round';
+    S.ghosts.forEach(function (e) {
+      if (e.s._hid || e.t._hid) return;
+      var hi = sel && (e.s === sel || e.t === sel);
+      ctx.strokeStyle = hi ? 'rgba(214,180,240,.95)' : sel ? 'rgba(201,160,220,.06)' : 'rgba(201,160,220,.38)';
+      ctx.lineWidth = lw * (hi ? 2.4 : 1.6);
+      ctx.beginPath(); ctx.moveTo(e.s.x, e.s.y); ctx.lineTo(e.t.x, e.t.y); ctx.stroke();
+    });
+    ctx.lineCap = 'butt';
+  }
   ctx.setLineDash([]);
   var neigh = new Set();
-  if (sel) { sel.out.forEach(function (id) { neigh.add(id); }); sel.inn.forEach(function (id) { neigh.add(id); }); }
+  if (sel) { sel.out.forEach(function (id) { neigh.add(id); }); sel.inn.forEach(function (id) { neigh.add(id); }); if (S.showGhosts) S.ghosts.forEach(function (e) { if (e.s === sel) neigh.add(e.t.id); else if (e.t === sel) neigh.add(e.s.id); }); }
   S.nodes.forEach(function (n) {
     if (n._hid) return;
     var isRem = S.removed.has(n.id), isB = anyRemoved && brokenNow(n, t);
@@ -1345,6 +1423,7 @@ var SAMPLE_HISTORY = [
 ];
 function sampleCommits() { return SAMPLE_HISTORY.map(function (c, i) { return { sha: 'example' + i, t: D0 + c.d * DAY, msg: c.msg, files: c.files.map(function (x) { var k = x.lastIndexOf(':'); return { p: x.slice(0, k), s: x.slice(k + 1) }; }) }; }); }
 
+$('#ghostBtn').addEventListener('click', function () { S.showGhosts = !S.showGhosts; renderSeg(); renderLegend(); renderSel(); S.dirty = true; });
 Array.prototype.forEach.call(document.querySelectorAll('#groupBy button'), function (b) { b.addEventListener('click', function () { setGroupBy(b.dataset.g); }); });
 function renderHead() {
   $('#repoName').textContent = S.meta.name;
@@ -1388,6 +1467,13 @@ function renderInsights() {
     var rr = g.edges.filter(function (e) { return e.to.indexOf('repo:') === 0; });
     box.appendChild(insight('Mapped', rs.length + ' repos', rr.length + ' links between them · ' + (g.sharedCount || 0) + ' shared outside packages'));
     attentionInsight(box);
+    if (S.ghosts.length) {
+      var lone0 = rs.filter(function (n) { return !n.inn.some(function (i) { return i.indexOf('repo:') === 0; }) && !n.out.some(function (o) { return o.indexOf('repo:') === 0; }); });
+      var helped = lone0.filter(function (n) { return S.ghosts.some(function (e) { return e.s === n || e.t === n; }); }).length;
+      var gcard = el('button', { class: 'ins', type: 'button', title: 'Repos that clearly belong together but never mention each other' }, [el('span', { class: 'k', text: 'Suggested links' }), el('span', { class: 'v', text: String(S.ghosts.length) }), el('span', { class: 'd', text: lone0.length ? helped + ' of ' + lone0.length + ' standalone repos get a match' : 'Pairs that belong together' })]);
+      gcard.addEventListener('click', function () { showGhosts(gcard); });
+      box.appendChild(gcard);
+    }
     var hubR = rs.slice().sort(function (a, b) { return b.inn.length - a.inn.length; }).filter(function (n) { return n.inn.length > 0; });
     if (hubR.length) box.appendChild(insight('Most relied on', hubR[0].label, 'Other repos point to it ' + hubR[0].inn.length + ' time' + (hubR[0].inn.length === 1 ? '' : 's'), hubR.slice(0, 6).map(function (n) { return { id: n.id, label: n.label + ' · ' + n.inn.length }; })));
     var lone = rs.filter(function (n) { return !n.inn.some(function (i) { return i.indexOf('repo:') === 0; }) && !n.out.some(function (o) { return o.indexOf('repo:') === 0; }); });
@@ -1426,6 +1512,7 @@ function renderLegend() {
     lg.appendChild(rl);
     lg.appendChild(el('span', {}, [el('i', { style: 'background:' + BREAK }), 'would break']));
     lg.appendChild(healthLegend());
+    if (S.showGhosts && S.ghosts.length) { var gl2 = document.createElement('span'); gl2.innerHTML = '<svg width="22" height="8" viewBox="0 0 22 8" aria-hidden="true"><line x1="2" y1="4" x2="20" y2="4" stroke="#C9A0DC" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg>suggested link'; lg.appendChild(gl2); }
     if (S.time) lg.appendChild(el('span', {}, [el('i', { style: 'background:#FFE2A0;box-shadow:0 0 6px 3px rgba(255,226,160,.6)' }), 'worked on lately · faded = quiet for a year']));
     return;
   }
@@ -1480,6 +1567,15 @@ function renderSel() {
     el('button', { class: off ? 'btn teal' : 'btn primary', type: 'button', onclick: function () { setRemoved(n.id, !off); } }, [off ? 'Bring it back' : 'Switch it off']),
     el('button', { class: 'btn ghost', type: 'button', onclick: function () { select(null); } }, ['Close'])
   ]));
+  var mine = S.showGhosts ? S.ghosts.filter(function (e) { return e.s === n || e.t === n; }) : [];
+  if (mine.length) {
+    var sg = el('div', { class: 'grp' }, [el('div', { text: 'Suggested links' })]);
+    mine.forEach(function (e) { var o = e.s === n ? e.t : e.s; sg.appendChild(el('button', { class: 'link sugg', type: 'button', onclick: function () { select(o.id); centerOn(o); } }, [el('b', { text: o.label }), el('small', { text: e.why })])); });
+    var cb = el('button', { class: 'btn ghost', type: 'button', style: 'align-self:flex-start;min-height:40px;padding:8px 14px' }, ['Copy README snippet']);
+    cb.addEventListener('click', function () { copyText(readmeSnippet(n, mine), cb); });
+    sg.appendChild(cb);
+    p.appendChild(sg);
+  }
   if (n.inn.length) {
     var grp = el('div', { class: 'grp' }, [el('div', { text: 'Used by' })]);
     n.inn.slice(0, 12).forEach(function (id) { grp.appendChild(el('button', { class: 'link', type: 'button', onclick: function () { select(id); centerOn(S.byId.get(id)); } }, [S.byId.get(id).label + (S.unit === 'repos' ? '' : ' (' + id + ')') + ' · ' + (S.how.get(id + '\u0000' + n.id) || 'uses')])); });
@@ -1526,6 +1622,30 @@ $('#q').addEventListener('input', function () {
 });
 
 // ----- engine model export -----
+// ----- ghost links (Phase 4) -----
+function readmeSnippet(n, list) {
+  var lines = ['## Related projects', ''];
+  list.forEach(function (e) { var o = e.s === n ? e.t : e.s; lines.push('- [' + o.label + '](' + (o.repo && o.repo.url || '') + ')' + (o.repo && o.repo.desc ? ' — ' + o.repo.desc : '')); });
+  return lines.join('\n') + '\n';
+}
+function copyText(t, btn) {
+  var done = function (ok) { var old = btn.textContent; btn.textContent = ok ? 'Copied ✓' : 'Press Ctrl+C'; setTimeout(function () { btn.textContent = old; }, 1600); };
+  var fallback = function () { var ta = el('textarea', { style: 'position:fixed;left:-9999px' }); ta.value = t; document.body.appendChild(ta); ta.select(); var ok = false; try { ok = document.execCommand('copy'); } catch (e) {} ta.remove(); done(ok); };
+  try { navigator.clipboard.writeText(t).then(function () { done(true); }, fallback); } catch (e) { fallback(); }
+}
+function showGhosts(card) {
+  var p = $('#insPane'); p.hidden = false; p.innerHTML = '';
+  Array.prototype.forEach.call(document.querySelectorAll('.ins.on'), function (x) { x.classList.remove('on'); });
+  card.classList.add('on');
+  if (!S.showGhosts) { S.showGhosts = true; renderSeg(); renderLegend(); S.dirty = true; }
+  p.appendChild(el('div', { class: 'row', style: 'justify-content:space-between' }, [el('h3', { text: 'Suggested links' }), el('button', { class: 'chip', type: 'button', 'aria-label': 'Close', onclick: function () { p.hidden = true; card.classList.remove('on'); } }, ['✕'])]));
+  p.appendChild(el('span', { class: 'hint', text: 'Repos that never mention each other but clearly belong together — from the words in their READMEs and descriptions, shared packages and shared names. Click one to see it and copy a “Related projects” snippet for its README.' }));
+  S.ghosts.slice(0, 60).forEach(function (e) {
+    p.appendChild(el('button', { class: 'link sugg', type: 'button', onclick: function () { select(e.s.id); centerOn(e.s); } }, [el('b', { text: e.s.label + '  ↔  ' + e.t.label }), el('small', { text: e.why })]));
+  });
+  openSheet(true); $('#side').scrollTop = 0;
+}
+
 // ----- health (Phase 2) -----
 var HEALTH_COLOR = { ok: '#8FD694', warn: '#F2C14E', quiet: '#6E6886' };
 var HEALTH_WORD = { ok: 'Looks healthy', warn: 'Worth a look', quiet: 'Quiet' };
@@ -1727,7 +1847,7 @@ function engineModel() {
     engine: 'ripple/0.1',
     source: { type: S.meta.kind, name: S.meta.name, url: S.meta.url || null, commit: S.meta.commit || null },
     nodes: S.nodes.map(function (n) { var o = { id: n.id, kind: n.kind, type: n.sub, group: n.group }; if (n._h) o.health = { level: n._h.level, why: n._h.why }; return o; }),
-    edges: S.g.edges.map(function (e) { return { from: e.from, to: e.to, kind: e.how }; }),
+    edges: S.g.edges.map(function (e) { return { from: e.from, to: e.to, kind: e.how }; }).concat(S.ghosts.map(function (e) { return { from: e.s.id, to: e.t.id, kind: 'suggested', why: e.why }; })),
     levers: Array.from(leverIds).map(function (id) { var n = S.byId.get(id); return { id: 'remove:' + id, label: 'Remove ' + n.label, type: 'switch', target: id }; }),
     effects: [{ when: 'lever.on', rule: 'reach', from: 'lever.target', direction: 'upstream', mark: 'breaks' }],
     snapshot: { removed: Array.from(S.removed), breaks: Array.from(S.depth.keys()).filter(function (id) { return !S.removed.has(id); }) },
