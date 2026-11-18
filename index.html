@@ -1440,8 +1440,8 @@ function draw(t) {
   var cands = [];
   S.nodes.forEach(function (n) {
     if (n._hid) return;
-    var force = n === sel || n.id === S.hover || S.removed.has(n.id) || (sel && neigh.has(n.id) && neigh.size < 30);
-    if (force || S.labelSet.has(n.id)) cands.push({ n: n, p: force ? 1e9 : n.r * 2 + n.inn.length + (n._glow || 0) * 6 });
+    var force = n === sel || n.id === S.hover || S.removed.has(n.id), near = sel && neigh.has(n.id);
+    if (force || near || S.labelSet.has(n.id)) cands.push({ n: n, p: force ? 1e9 : (near ? 1e6 : 0) + n.r * 2 + n.inn.length + (n._glow || 0) * 6 });
   });
   cands.sort(function (a, b) { return b.p - a.p; });
   cands.forEach(function (c) {
