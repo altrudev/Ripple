@@ -99,6 +99,13 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #modal .card{width:min(820px,100%);display:flex;flex-direction:column;gap:12px}
 #modal textarea{width:100%;height:50vh;background:var(--deep);color:var(--text);border:1.5px solid var(--line);border-radius:12px;padding:12px;font:12px/1.4 ui-monospace,Menlo,monospace}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* ---- Phase 3: meaning ---- */
+.seg{display:inline-flex;align-items:center;gap:2px;background:var(--panel);border-radius:10px;padding:3px;margin-right:auto}
+.seg[hidden]{display:none}
+.repohead .seg span{color:var(--muted);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:0 8px 0 6px;display:inline}
+.seg button{border:0;background:transparent;color:var(--text);font:600 13px 'DM Sans',system-ui,sans-serif;padding:5px 11px;border-radius:8px;min-height:32px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--teal);color:var(--navy)}
+.seg button:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
 /* ---- Phase 2: health ---- */
 .why{display:flex;align-items:flex-start;gap:6px;margin-top:4px}
 .why i{flex:none;width:9px;height:9px;border-radius:50%;margin-top:4px;border:2px solid currentColor;background:transparent}
@@ -176,6 +183,8 @@ body.has-map #status{margin:0;flex-basis:100%}
   body.has-map details{display:none}
   .repohead h2{font-size:16px}
   .repohead span{display:none}
+  .repohead .seg span{display:none}
+  .seg button{padding:5px 8px;font-size:12px}
   .work{position:relative}
   .side{position:absolute;left:0;right:0;bottom:0;flex:none;width:auto;max-height:52px;overflow:hidden;background:var(--navy);border-radius:16px 16px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.45);padding:0 8px 8px;z-index:6;transition:max-height .25s ease}
   .side.open{max-height:62%;overflow-y:auto}
@@ -225,7 +234,7 @@ body.has-map #status{margin:0;flex-basis:100%}
   </div>
 
   <section id="app" aria-label="Repo map">
-    <div class="repohead"><h2 id="repoName"></h2><span id="repoMeta"></span></div>
+    <div class="repohead"><h2 id="repoName"></h2><div class="seg" id="groupBy" role="group" aria-label="Group repos by" hidden><span>Group by</span><button type="button" data-g="purpose">Purpose</button><button type="button" data-g="family">Family</button><button type="button" data-g="language">Language</button></div><span id="repoMeta"></span></div>
     <div class="insights" id="insights"></div>
     <div class="work">
       <div class="stage" id="stage">
@@ -788,6 +797,30 @@ function repoHealth(r, now) {
   if (miss.length) return { level: 'warn', why: miss.join(' · ').replace(/^./, function (c) { return c.toUpperCase(); }), miss: miss.length };
   return { level: 'ok', why: 'README, description and license in place' };
 }
+// ----- meaning (Phase 3) -----
+var PURPOSES = [
+  ['Agent safety & trust', 'agent agents agentic assurance governance governed audit auditing trust trusted verification verifier verify policy policies compliance provenance attestation integrity evidence proof proofs drift guard guardrail guardrails safety authorization accountability oversight federation receipt receipts'],
+  ['Privacy & messaging', 'privacy private encrypt encrypted encryption e2e e2ee messenger messaging chat relay anonymous watermark watermarking secure'],
+  ['Games', 'game games godot rpg gameplay player players arcade roguelike survival battle battleboard multiplayer puzzle'],
+  ['Accessibility', 'accessibility a11y wcag assistive inclusive'],
+  ['Money & payments', 'payment payments pay finance financial budget budgeting money trading trader defi yield solidity wallet invoice billing'],
+  ['AI & models', 'ai llm llms model models inference ml neural prompt prompts gpt embedding embeddings'],
+  ['Developer tools', 'cli tool tools terminal devtools visualizer lint linter ci sdk library plugin vscode mcp framework debug debugger ide developer developers git github'],
+  ['Web & apps', 'pwa webapp app apps offline browser extension chrome dashboard website site frontend android mobile desktop'],
+  ['Research & specs', 'research paper spec specification standard benchmark study lab experiment experiments whitepaper hackathon analysis']
+].map(function (p) { return { label: p[0], words: new Set(p[1].split(' ')) }; });
+function wordsOf(t) { return (t || '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean); }
+// Deterministic purpose guess. Name and topics weigh 3, description 2, README start 1; each word counts once per source.
+function classifyPurpose(name, desc, topics, readme) {
+  var src = [[wordsOf(name), 3], [wordsOf((topics || []).join(' ')), 3], [wordsOf(desc), 2], [wordsOf((readme || '').replace(/```[\s\S]*?```/g, ' ').replace(/https?:\/\/\S+/g, ' ').slice(0, 2500)), 1]];
+  var best = null;
+  PURPOSES.forEach(function (p, i) {
+    var score = 0, hits = new Map();
+    src.forEach(function (sw) { new Set(sw[0]).forEach(function (w) { if (p.words.has(w)) { score += sw[1]; hits.set(w, (hits.get(w) || 0) + sw[1]); } }); });
+    if (score >= 3 && (!best || score > best.score)) best = { label: p.label, score: score, words: Array.from(hits.entries()).sort(function (a, b) { return b[1] - a[1]; }).slice(0, 3).map(function (e) { return e[0]; }) };
+  });
+  return best || { label: 'Other', score: 0, words: [] };
+}
 // ===== CORE END =====
 
 var SAMPLE = {
@@ -822,7 +855,7 @@ var el = function (tag, attrs, kids) {
 };
 var GROUP_COLORS = ['#6BBFB0', '#8C7CF0', '#7FB2E5', '#9BD48A', '#D9C6A5', '#5FD3E6', '#C9A0DC', '#B5C46A', '#A3A9C9'];
 var PKG_COLOR = '#F2C14E', BREAK = '#FF7A59', TEAL = '#6BBFB0';
-var S = { g: null, byId: null, nodes: [], edges: [], removed: new Set(), depth: new Map(), maxDepth: 0, rippleT: 0, selected: null, hover: null, view: { x: 0, y: 0, k: 1 }, touched: false, alpha: 0, dirty: true, meta: {}, groupColor: {}, labelSet: new Set() };
+var S = { groupBy: 'purpose', g: null, byId: null, nodes: [], edges: [], removed: new Set(), depth: new Map(), maxDepth: 0, rippleT: 0, selected: null, hover: null, view: { x: 0, y: 0, k: 1 }, touched: false, alpha: 0, dirty: true, meta: {}, groupColor: {}, labelSet: new Set() };
 
 function status(msg, pct, err) {
   var st = $('#status'); st.style.display = 'block'; st.className = err ? 'err' : '';
@@ -990,7 +1023,9 @@ function buildAccountGraph(owner, repos) {
     r._info = info;
     info.own.forEach(function (o) { ownPkg.set(o, r.name); });
     byName.set(r.name.toLowerCase(), r.name);
+    var pur = classifyPurpose(r.name, r.description, r.topics, r._f['README.md'] || r._f['readme.md']);
     nodes.push({ id: 'repo:' + r.name, kind: 'file', sub: 'repo', label: r.name, group: group, unknown: 0,
+      groups: { purpose: pur.label, family: group, language: r.language || 'Other' }, purposeWords: pur.words,
       repo: { desc: r.description || '', lang: r.language || '', stars: r.stargazers_count || 0, pushed: (r.pushed_at || '').slice(0, 10), created: Date.parse(r.created_at) || 0, pushedT: Date.parse(r.pushed_at) || 0, readme: !!(r._f['README.md'] || r._f['readme.md']), license: r.license ? (r.license.spdx_id || 'yes') : '', issues: r.open_issues_count || 0, url: r.html_url, archived: r.archived, deps: info.deps.length, size: r.size || 0 } });
   });
   var depUse = new Map();
@@ -1016,6 +1051,35 @@ function buildAccountGraph(owner, repos) {
 }
 
 // ----- graph setup -----
+// Colours and anchor points per group; 'Other' is always grey and last.
+function layoutGroups(nodes, reset) {
+  var groups = {};
+  nodes.forEach(function (n) { if (n.kind === 'file') groups[n.group] = (groups[n.group] || 0) + 1; });
+  var order = Object.keys(groups).sort(function (a, b) { return (a === 'Other') - (b === 'Other') || groups[b] - groups[a]; });
+  S.groupColor = {}; var last = GROUP_COLORS.length - 1;
+  order.forEach(function (gname, i) { S.groupColor[gname] = gname === 'Other' ? GROUP_COLORS[last] : GROUP_COLORS[Math.min(i, last - 1)]; });
+  S.groupOrder = order; S.groupCount = groups;
+  var anchors = {}, gl = order.concat(['outside']), spread = S.unit === 'repos' ? 1 + Math.max(0, gl.length - 6) * 0.08 : 1;
+  gl.forEach(function (gname, i) { var a = i / gl.length * Math.PI * 2; var R = (gname === 'outside' ? 340 : 200 + 40 * (i % 2)) * spread; anchors[gname] = { x: Math.cos(a) * R, y: Math.sin(a) * R }; });
+  nodes.forEach(function (n) {
+    var an = anchors[n.group] || anchors.outside; n.ax = an.x; n.ay = an.y;
+    if (n.sub === 'repo') { n.ax *= 1.6; n.ay *= 1.6; }
+    if (reset) { n.x = an.x + (Math.random() - .5) * 120; n.y = an.y + (Math.random() - .5) * 120; n.vx = 0; n.vy = 0; }
+    n.color = n.kind === 'package' ? PKG_COLOR : S.groupColor[n.group];
+  });
+}
+function setGroupBy(mode) {
+  if (S.unit !== 'repos' || S.groupBy === mode) return;
+  S.groupBy = mode;
+  S.nodes.forEach(function (n) { if (n.groups) n.group = n.groups[mode]; });
+  layoutGroups(S.nodes, false);
+  S.alpha = 0.9; S.touched = false;
+  renderSeg(); renderLegend(); renderSel(); S.dirty = true;
+}
+function renderSeg() {
+  var sg = $('#groupBy'); sg.hidden = S.unit !== 'repos';
+  Array.prototype.forEach.call(sg.querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', b.dataset.g === S.groupBy ? 'true' : 'false'); });
+}
 function start(res) {
   status('Mapping connections…', 0.96);
   var g = res.graph || buildGraph(res.files);
@@ -1023,23 +1087,13 @@ function start(res) {
   S.unit = res.meta.kind === 'account' ? 'repos' : 'files';
   if (!g.nodes.length) throw new Error('No readable text files found in this repo (only images or binaries?).');
   S.g = g; S.byId = linkUp(g); S.meta = res.meta; S.removed = new Set(); S.depth = new Map(); S.selected = null;
-  var groups = {};
-  g.nodes.forEach(function (n) { if (n.kind === 'file') groups[n.group] = (groups[n.group] || 0) + 1; });
-  var order = Object.keys(groups).sort(function (a, b) { return groups[b] - groups[a]; });
-  S.groupColor = {};
-  order.forEach(function (gname, i) { S.groupColor[gname] = i < GROUP_COLORS.length - 1 ? GROUP_COLORS[i] : GROUP_COLORS[GROUP_COLORS.length - 1]; });
-  S.groupOrder = order;
-  var anchors = {}, gl = order.concat(['outside']);
-  gl.forEach(function (gname, i) { var a = i / gl.length * Math.PI * 2; var R = gname === 'outside' ? 340 : 200 + 40 * (i % 2); anchors[gname] = { x: Math.cos(a) * R, y: Math.sin(a) * R }; });
+  if (res.meta.kind === 'account') g.nodes.forEach(function (n) { if (n.groups) n.group = n.groups[S.groupBy] || n.groups.family; });
+  var base = g.nodes.length < 40 ? 6 : g.nodes.length < 150 ? 4 : 3;
   g.nodes.forEach(function (n) {
-    var an = anchors[n.group]; n.ax = an.x; n.ay = an.y;
-    n.x = an.x + (Math.random() - .5) * 120; n.y = an.y + (Math.random() - .5) * 120; n.vx = 0; n.vy = 0;
-    if (n.sub === 'repo') { n.ax *= 1.6; n.ay *= 1.6; }
-    var base = g.nodes.length < 40 ? 6 : g.nodes.length < 150 ? 4 : 3;
-    if (n.sub === 'repo') { n.r = 8 + Math.min(12, Math.log(1 + (n.repo.size || 0)) * 1.4) + Math.sqrt(n.inn.length * 2 + n.out.length) * 2.2; n.color = S.groupColor[n.group]; return; }
-    n.r = n.kind === 'package' ? base + 1 + Math.sqrt(n.inn.length) * 2.2 : base + Math.sqrt(n.inn.length) * 2.4;
-    n.color = n.kind === 'package' ? PKG_COLOR : S.groupColor[n.group];
+    if (n.sub === 'repo') n.r = 8 + Math.min(12, Math.log(1 + (n.repo.size || 0)) * 1.4) + Math.sqrt(n.inn.length * 2 + n.out.length) * 2.2;
+    else n.r = n.kind === 'package' ? base + 1 + Math.sqrt(n.inn.length) * 2.2 : base + Math.sqrt(n.inn.length) * 2.4;
   });
+  layoutGroups(g.nodes, true);
   S.nodes = g.nodes; S.edges = g.edges.map(function (e) { return { s: S.byId.get(e.from), t: S.byId.get(e.to), how: e.how }; });
   S.how = new Map(); g.edges.forEach(function (e) { S.how.set(e.from + '\u0000' + e.to, e.how); });
   var ranked = g.nodes.slice().sort(function (a, b) { return b.inn.length - a.inn.length; });
@@ -1069,12 +1123,13 @@ function tick() {
   }
   S.edges.forEach(function (e) {
     var dx = e.t.x - e.s.x, dy = e.t.y - e.s.y, d = Math.sqrt(dx * dx + dy * dy) || 1;
-    var L = e.t.kind === 'package' ? 90 : e.s.sub === 'repo' ? 140 : 42, f = (d - L) / d * 0.05 * a;
+    var L = e.t.kind === 'package' ? 90 : e.s.sub === 'repo' ? 140 : 42, f = (d - L) / d * (e.s.sub === 'repo' && e.t.sub === 'repo' && e.s.group !== e.t.group ? 0.008 : 0.05) * a;
     e.s.vx += dx * f; e.s.vy += dy * f; e.t.vx -= dx * f; e.t.vy -= dy * f;
   });
   for (i = 0; i < n; i++) {
     var m = N[i];
-    m.vx += (m.ax - m.x) * 0.006 * a; m.vy += (m.ay - m.y) * 0.006 * a;
+    var ka = m.sub === 'repo' ? 0.02 : 0.006;
+    m.vx += (m.ax - m.x) * ka * a; m.vy += (m.ay - m.y) * ka * a;
     if (m.fixed) { m.vx = m.vy = 0; continue; }
     m.vx *= 0.62; m.vy *= 0.62;
     m.x += m.vx; m.y += m.vy;
@@ -1098,7 +1153,8 @@ function fit() {
   if (!S.nodes.length || !W) return;
   var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   S.nodes.forEach(function (n) { x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y); x1 = Math.max(x1, n.x); y1 = Math.max(y1, n.y); });
-  var bh = S.time ? (W < 500 ? 64 : 58) : 0, h = H - bh;
+  if (S.unit === 'repos') y0 -= 34;
+  var lgH = $('#legend').offsetHeight, bh = (S.time ? (W < 500 ? 64 : 58) : 0) + (lgH ? lgH + 6 : 0), h = H - bh;
   var k = Math.min(W / (x1 - x0 + 120), h / (y1 - y0 + 140), 2.2);
   S.view.k = k; S.view.x = W / 2 - (x0 + x1) / 2 * k; S.view.y = h / 2 - (y0 + y1) / 2 * k;
 }
@@ -1160,11 +1216,32 @@ function draw(t) {
   ctx.globalAlpha = 1;
   ctx.font = '600 ' + (13 / v.k) + 'px "DM Sans", system-ui, sans-serif';
   ctx.textBaseline = 'middle';
+  // Labels never pile up: important ones first, any that would overlap are left for hover/zoom.
+  var placed = [], fs = 13 / v.k, over = function (b) { return placed.some(function (q) { return !(b[2] < q[0] || b[0] > q[2] || b[3] < q[1] || b[1] > q[3]); }); };
+  if (S.unit === 'repos' && !anyRemoved) {
+    var cl = {};
+    S.nodes.forEach(function (n) { if (n.sub !== 'repo' || n._hid) return; var c = cl[n.group] || (cl[n.group] = { n: 0, x: 0, y0: 1e9 }); c.n++; c.x += n.x; c.y0 = Math.min(c.y0, n.y - n.r); });
+    ctx.font = '700 ' + (14 / v.k) + 'px "DM Sans", system-ui, sans-serif'; ctx.textAlign = 'center';
+    Object.keys(cl).forEach(function (gname) {
+      var c = cl[gname]; if (c.n < 2) return;
+      var cx = c.x / c.n, cy = c.y0 - 16 / v.k, w = ctx.measureText(gname).width, b = [cx - w / 2, cy - 9 / v.k, cx + w / 2, cy + 9 / v.k];
+      if (over(b)) return; placed.push(b);
+      ctx.globalAlpha = sel ? 0.35 : 0.9; ctx.lineWidth = 4 / v.k; ctx.strokeStyle = '#14111F'; ctx.strokeText(gname, cx, cy);
+      ctx.fillStyle = S.groupColor[gname] || '#B9B3C9'; ctx.fillText(gname, cx, cy);
+    });
+    ctx.globalAlpha = 1; ctx.textAlign = 'left'; ctx.font = '600 ' + fs + 'px "DM Sans", system-ui, sans-serif';
+  }
+  var cands = [];
   S.nodes.forEach(function (n) {
     if (n._hid) return;
-    var show = S.labelSet.has(n.id) || n === sel || n.id === S.hover || S.removed.has(n.id) || (sel && neigh.has(n.id) && neigh.size < 30);
-    if (!show) return;
-    var tx = n.x + n.r + 5 / v.k, ty = n.y;
+    var force = n === sel || n.id === S.hover || S.removed.has(n.id) || (sel && neigh.has(n.id) && neigh.size < 30);
+    if (force || S.labelSet.has(n.id)) cands.push({ n: n, p: force ? 1e9 : n.r * 2 + n.inn.length + (n._glow || 0) * 6 });
+  });
+  cands.sort(function (a, b) { return b.p - a.p; });
+  cands.forEach(function (c) {
+    var n = c.n, tx = n.x + n.r + 5 / v.k, ty = n.y, w = ctx.measureText(n.label).width, b = [tx, ty - fs * 0.62, tx + w, ty + fs * 0.62];
+    if (c.p < 1e9 && over(b)) return;
+    placed.push(b);
     ctx.lineWidth = 3 / v.k; ctx.strokeStyle = '#14111F'; ctx.strokeText(n.label, tx, ty);
     ctx.fillStyle = (S.removed.size && !S.depth.has(n.id)) ? 'rgba(244,241,236,.5)' : '#F4F1EC'; ctx.fillText(n.label, tx, ty);
   });
@@ -1213,6 +1290,7 @@ cv.addEventListener('pointermove', function (e) {
     tip.innerHTML = '';
     tip.appendChild(el('b', { text: n.kind === 'package' || n.repo ? n.label : n.id }));
     tip.appendChild(el('span', { text: (SUB_LABEL[n.sub] || n.sub || '') + ' · used by ' + n.inn.length + ' · uses ' + n.out.length + (n.repo && n.repo.pushedT ? ' · last work ' + ago(n.repo.pushedT) : '') }));
+    if (n.groups && S.groupBy === 'purpose') tip.appendChild(el('span', { style: 'display:block;color:var(--muted)', text: n.groups.purpose + (n.purposeWords.length ? ' · matched ' + n.purposeWords.join(', ') : '') }));
     if (n._h) tip.appendChild(el('span', { class: 'why', style: 'color:' + HEALTH_COLOR[n._h.level] }, [el('i'), el('span', { style: 'color:var(--text)', text: n._h.why })]));
     tip.style.left = Math.min(sx + 14, W - 290) + 'px'; tip.style.top = (sy + 14) + 'px';
     cv.style.cursor = 'pointer';
@@ -1261,6 +1339,7 @@ var SAMPLE_HISTORY = [
 ];
 function sampleCommits() { return SAMPLE_HISTORY.map(function (c, i) { return { sha: 'example' + i, t: D0 + c.d * DAY, msg: c.msg, files: c.files.map(function (x) { var k = x.lastIndexOf(':'); return { p: x.slice(0, k), s: x.slice(k + 1) }; }) }; }); }
 
+Array.prototype.forEach.call(document.querySelectorAll('#groupBy button'), function (b) { b.addEventListener('click', function () { setGroupBy(b.dataset.g); }); });
 function renderHead() {
   $('#repoName').textContent = S.meta.name;
   var back = $('#backBtn'); if (back) back.remove();
@@ -1271,6 +1350,7 @@ function renderHead() {
   if (S.meta.capped) bits.push('first ' + MAX_FILES + ' of ' + S.meta.total + ' source files');
   if (S.meta.truncated) bits.push('GitHub sent a partial file list');
   $('#repoMeta').textContent = bits.join(' · ');
+  renderSeg();
 }
 function chipFor(ch) { return ch.id ? el('button', { class: 'chip', type: 'button', title: ch.title || ch.label, onclick: function () { var n = S.byId.get(ch.id); select(ch.id); centerOn(n); } }, [ch.label]) : el('span', { class: 'chip', title: ch.label }, [ch.label]); }
 function showInsight(card, k, v, d, chips) {
@@ -1331,7 +1411,7 @@ function renderInsights() {
 }
 function renderLegend() {
   var lg = $('#legend'); lg.innerHTML = '';
-  S.groupOrder.slice(0, 7).forEach(function (gname) { lg.appendChild(el('span', {}, [el('i', { style: 'background:' + S.groupColor[gname] }), gname])); });
+  S.groupOrder.slice(0, S.unit === 'repos' ? 10 : 7).forEach(function (gname) { lg.appendChild(el('span', {}, [el('i', { style: 'background:' + S.groupColor[gname] }), gname + (S.unit === 'repos' ? ' ' + S.groupCount[gname] : '')])); });
   lg.appendChild(el('span', {}, [el('i', { style: 'background:' + PKG_COLOR + ';border-radius:2px;transform:rotate(45deg)' }), 'outside']));
   if (S.unit === 'repos') {
     var rl = document.createElement('span');
@@ -1383,6 +1463,7 @@ function renderSel() {
   ]));
   if (n.repo) {
     if (n.repo.desc) p.appendChild(el('span', { class: 'hint', text: n.repo.desc }));
+    if (n.groups) p.appendChild(el('span', { class: 'hint', text: 'Purpose: ' + n.groups.purpose + (n.purposeWords.length ? ' — matched ' + n.purposeWords.map(function (w) { return '“' + w + '”'; }).join(', ') : ' — no telling words in its name, topics, description or README') }));
     if (n.repo.created) p.appendChild(el('span', { class: 'hint', text: 'Started ' + fmtDay(n.repo.created) + ' · last work ' + ago(n.repo.pushedT) }));
     p.appendChild(el('div', { class: 'row' }, [
       el('button', { class: 'btn teal', type: 'button', onclick: function () { run(loadGitHub(S.meta.owner + '/' + n.label, $('#token').value.trim())); } }, ['Map its files']),

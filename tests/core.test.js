@@ -5,7 +5,7 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const script = html.split('<script>\n')[1].split('</script>\n</body>')[0];
 const core = script.split('// ===== CORE START =====')[1].split('// ===== UI =====')[0];
 const R = {};
-new Function('R', core + ';R.buildGraph=buildGraph;R.linkUp=linkUp;R.rippleFrom=rippleFrom;R.SAMPLE=SAMPLE;R.wanted=wanted;R.kindOf=kindOf;R.repoLook=repoLook;R.commitGlow=commitGlow;R.addedTimes=addedTimes;R.DAY=DAY;R.fileHealth=fileHealth;R.repoHealth=repoHealth;')(R);
+new Function('R', core + ';R.buildGraph=buildGraph;R.linkUp=linkUp;R.rippleFrom=rippleFrom;R.SAMPLE=SAMPLE;R.wanted=wanted;R.kindOf=kindOf;R.repoLook=repoLook;R.commitGlow=commitGlow;R.addedTimes=addedTimes;R.DAY=DAY;R.fileHealth=fileHealth;R.repoHealth=repoHealth;R.classifyPurpose=classifyPurpose;')(R);
 
 let passed = 0;
 function test(name, fn) { try { fn(); passed++; console.log('ok  ', name); } catch (e) { console.error('FAIL', name, '\n     ', e.message); process.exitCode = 1; } }
@@ -161,6 +161,17 @@ test('health: repos — archived, idle, missing pieces, healthy', () => {
   assert.strictEqual(R.repoHealth({ ...base, pushedT: now - 400 * R.DAY }, now).level, 'quiet');
   const w = R.repoHealth({ ...base, license: '', desc: '' }, now);
   assert.strictEqual(w.level, 'warn'); assert.strictEqual(w.why, 'No description · no license'); assert.strictEqual(w.miss, 2);
+});
+
+test('meaning: purpose guess is deterministic and explains itself', () => {
+  const a = R.classifyPurpose('MCP-DriftGuard', 'Detects drift in agent tool servers', ['mcp', 'security'], '');
+  assert.strictEqual(a.label, 'Agent safety & trust'); assert(a.words.includes('drift'));
+  assert.strictEqual(R.classifyPurpose('Battleboard-Game', 'A Godot RPG', [], '').label, 'Games');
+  assert.strictEqual(R.classifyPurpose('webgazer-aac', '', ['accessibility', 'assistive'], '').label, 'Accessibility');
+  assert.strictEqual(R.classifyPurpose('notes', '', [], 'Just my notes.').label, 'Other', 'no telling words → Other');
+  assert.strictEqual(R.classifyPurpose('x', '', [], 'one app').label, 'Other', 'a single README word is not enough');
+  const code = R.classifyPurpose('x', '', [], '```\ngame game game\n```');
+  assert.strictEqual(code.label, 'Other', 'code blocks are ignored');
 });
 
 console.log('\n' + passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));

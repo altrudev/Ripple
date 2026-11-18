@@ -1,6 +1,6 @@
 # Ripple — Roadmap
 
-Last updated: 2026-11-18 · Current version: **v0.5 (live)** — Phases 0–2 done, 21 languages
+Last updated: 2026-11-18 · Current version: **v0.6 (live)** — Phases 0–3 done, 21 languages
 
 Ripple's idea in one line: *code becomes visual objects; flip a switch, see the consequence.*
 The goal of the next versions is to make the map feel **alive** (time, health), **meaningful** (purpose, ghost links) and **actionable** (what to fix next) — and to put it on the altru.dev homepage as a living portfolio.
@@ -22,6 +22,7 @@ The goal of the next versions is to make the map feel **alive** (time, health), 
 | Layout (Phase 0) | ✅ v0.3: fits the window at every size, no page scroll; compact top bar + one-line tagline + language chips; opens straight onto an example map; insight strip opens details in the side panel; phone = full map + bottom sheet |
 | Time (Phase 1) | ✅ v0.4: time bar under the map. Account: slider from first repo to today, repos appear at birth (teal ring), glow = pushed in the last ~month, fade = quiet 6–18 months; Play animates the history. Repo: 1 extra call for the last 100 commits; each commit's changed files light up (1 call per commit, fetched on demand, stops before the visitor's hourly limit runs low); files appear when first added. Example map has a built-in 8-commit history |
 | Health (Phase 2) | ✅ v0.5: ring around every repo/code file — green healthy · amber worth a look · grey quiet — with a one-line reason on hover and in the details. Repos: README, description, license, 10+ open issues/PRs, archived, untouched 1 year+ (no extra calls). Files: a test imports it or matches its name (`foo.test.js`, `test_foo.py`, `foo_test.go`), hub (3+ dependents) without tests, runtime loads. "Needs attention" card → riskiest-first list in the side panel (reach × what's missing). Ring level + reason included in the engine model export |
+| Meaning (Phase 3) | ✅ v0.6: account maps have a *Group by* switch — **Purpose** (default) · Family · Language. Purpose is a deterministic word classifier (9 purposes + Other) over name and topics (×3), description (×2) and README start (×1, code blocks and links ignored); every repo shows what it matched. Group titles drawn on the map; labels never overlap (important ones win, the rest appear on hover/zoom); links between different groups pull gently so clusters stay apart. altrudev: 32 agent safety & trust · 7 developer tools · 6 web & apps · 3 games · 2 accessibility · 2 privacy & messaging · 1 money |
 | Readability + resize | ✅ v0.4: numbers and headings in DM Sans (Syne kept only for the logo); map labels 13px semibold; the map follows window resizes and keeps your zoom/position centred |
 | Hosting | ✅ altru.dev/apps/ripple/try (static), product page altru.dev/apps/ripple (featured) |
 | Tests | ✅ `tests/core.test.js` (Node, no deps). Browser tests were run ad hoc with Playwright — not yet in repo |
@@ -71,10 +72,10 @@ UI rule (applies to every phase): *simple on the surface, meaningful detail on d
 - **Done when:** every ring has a one-line "why" on hover.
 - Not yet: tests folder / CI workflow per repo in account mode (needs a token or the Phase 7 snapshot); file size signal.
 
-## Phase 3 — Meaning (group by purpose, not by name)
+## Phase 3 — Meaning (group by purpose, not by name) — ✅ shipped in v0.6
 
 - Group toggle: *Family · Purpose · Language*.
-- Purpose from repo `topics` + description keywords (deterministic classifier first: agent safety/assurance, accessibility, games, privacy tools, web apps, developer tools, research…). Optional AI labelling later, clearly marked as a guess.
+- Purpose from repo `topics` + description keywords (deterministic classifier first: agent safety/assurance, accessibility, games, privacy tools, web apps, developer tools, research…). Optional AI labelling later, clearly marked as a guess. *(Not done — the deterministic version reads altrudev well.)*
 - **Done when:** the altrudev map shows readable purpose clusters with a legend, and every label is explainable ("matched: 'assurance', 'agent'").
 
 ## Phase 4 — Ghost links (what *should* be connected)
