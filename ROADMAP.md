@@ -1,6 +1,6 @@
 # Ripple — Roadmap
 
-Last updated: 2026-11-18 · Current version: **v0.7 (live)** — Phases 0–4 done, 21 languages
+Last updated: 2026-11-18 · Current version: **v0.8 (live)** — Phases 0–5 done, 21 languages
 
 Ripple's idea in one line: *code becomes visual objects; flip a switch, see the consequence.*
 The goal of the next versions is to make the map feel **alive** (time, health), **meaningful** (purpose, ghost links) and **actionable** (what to fix next) — and to put it on the altru.dev homepage as a living portfolio.
@@ -24,6 +24,7 @@ The goal of the next versions is to make the map feel **alive** (time, health), 
 | Health (Phase 2) | ✅ v0.5: ring around every repo/code file — green healthy · amber worth a look · grey quiet — with a one-line reason on hover and in the details. Repos: README, description, license, 10+ open issues/PRs, archived, untouched 1 year+ (no extra calls). Files: a test imports it or matches its name (`foo.test.js`, `test_foo.py`, `foo_test.go`), hub (3+ dependents) without tests, runtime loads. "Needs attention" card → riskiest-first list in the side panel (reach × what's missing). Ring level + reason included in the engine model export |
 | Meaning (Phase 3) | ✅ v0.6: account maps have a *Group by* switch — **Purpose** (default) · Family · Language. Purpose is a deterministic word classifier (9 purposes + Other) over name and topics (×3), description (×2) and README start (×1, code blocks and links ignored); every repo shows what it matched. Group titles drawn on the map; labels never overlap (important ones win, the rest appear on hover/zoom); links between different groups pull gently, a dominant purpose sits in the middle with the others on a wide ring around it, so clusters stay apart. altrudev: 32 agent safety & trust · 7 developer tools · 6 web & apps · 3 games · 2 accessibility · 2 privacy & messaging · 1 money |
 | Ghost links (Phase 4) | ✅ v0.7: faint dotted lines between repos that never reference each other but belong together. In-browser TF-IDF cosine over name, description, topics and README (code blocks, links, filler words and words in >40% of repos ignored) + shared packages + same name family. Each repo keeps its 2 strongest matches; a repo with none gets its single best weaker one; nothing in common → no link. Every suggestion has a reason ("Both talk about gaze, webgazer, aac"). *Suggested links* toggle + card → list; repo details show its suggestions and **Copy README snippet** ("## Related projects" markdown). Included in the engine model as `suggested` edges. altrudev (live): 58 suggestions, 37 of 38 standalone repos get a match. v0.7.1 also fixes a Phase 0 leak: with a long details panel open, hidden labels made the page taller than the window — now checked in 36 states (4 sizes × selected / insight open / time past) |
+| Zoom inside a file (Phase 5) | ✅ v0.8: keep zooming into a code file (or double-click it, or *Look inside*) and it opens as a map of its functions, methods and classes; zoom far out (or *← All files*) to go back. Readers for JS/TS (+Vue/Svelte script), Python, Go, Rust, PHP, GDScript, Ruby: definitions, body extents (braces / indentation), calls, functions passed by name (`items.map(row)`), class use, methods → their class (Go: receiver type). Calls into files it imports (only when exactly one defines the name) show as ◆; files that call in show as boxes. Switching a function off ripples to its callers, in and out of the file. Real code: 203 files across 6 languages read in 110 ms (worst 9 ms for a 123 KB file) |
 | Readability + resize | ✅ v0.4: numbers and headings in DM Sans (Syne kept only for the logo); map labels 13px semibold; the map follows window resizes and keeps your zoom/position centred |
 | Hosting | ✅ altru.dev/apps/ripple/try (static), product page altru.dev/apps/ripple (featured) |
 | Tests | ✅ `tests/core.test.js` (Node, no deps). Browser tests were run ad hoc with Playwright — not yet in repo |
@@ -86,11 +87,12 @@ UI rule (applies to every phase): *simple on the surface, meaningful detail on d
 - Optional: suggested file links inside a repo (e.g. a doc that should mention a script). *(Not done yet.)*
 - **Done when:** for altrudev it proposes links for most of the 37 standalone repos, each with a stated reason.
 
-## Phase 5 — Zoom all the way in (semantic zoom)
+## Phase 5 — Zoom all the way in (semantic zoom) — ✅ shipped in v0.8
 
 - One continuous zoom: account → repo → file → functions/classes inside a file.
 - Function extraction per language (JS/TS, Python, Go, Rust, PHP first); call edges within a file; cross-file calls where imports make them unambiguous.
 - **Done when:** zooming into a file shows its functions as objects and switching a function off ripples to its callers.
+- Limits: static reading only — calls through variables/dynamic dispatch are not followed; `obj.name()` is matched by name; Java/Kotlin/C#/C/C++/Swift/Dart/Lua have no function reader yet; single-file HTML apps (inline `<script>`) aren't opened yet.
 
 ## Phase 6 — Movement (watch it run)
 

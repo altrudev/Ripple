@@ -880,6 +880,122 @@ function ghostLinks(items, linked) {
   cands.forEach(function (list, i) { var id = items[i].id; if (list.length && !Array.from(keep).some(function (g) { return g.a === id || g.b === id; })) keep.add(list[0]); });
   return Array.from(keep).sort(function (x, y) { return y.score - x.score; });
 }
+// ----- inside a file (Phase 5) -----
+var NOT_FN = new Set('if for while switch catch function return with else do try typeof new await yield super constructor elif except print require import from match case when unless'.split(' '));
+function langOf(p) {
+  var e = extOf(p);
+  if (/^(js|mjs|cjs|jsx|ts|tsx|mts|cts|vue|svelte)$/.test(e)) return 'js';
+  if (e === 'py') return 'py'; if (e === 'go') return 'go'; if (e === 'rs') return 'rs'; if (e === 'php') return 'php';
+  if (e === 'gd') return 'gd'; if (e === 'rb') return 'rb'; return null;
+}
+// Definitions in one file: [{ name, kind: 'function'|'class'|'method', at (index in cleaned source) }], plus the cleaned source.
+function fileFunctions(path, src) {
+  var lang = langOf(path); if (!lang || !src) return { lang: lang, defs: [], text: '' };
+  var t = lang === 'py' || lang === 'gd' || lang === 'rb' ? src.replace(/(^|[^\\'"#])#[^\n]*/g, '$1') : stripJsComments(src);
+  if (lang === 'js') { var sm = /<script\b[^>]*>([\s\S]*?)<\/script>/i.exec(t); if (/\.(vue|svelte)$/.test(path) && sm) t = sm[1]; }
+  var defs = [], seen = new Set();
+  var add = function (name, kind, at, recv) { if (!name || NOT_FN.has(name) || seen.has(name + '@' + at)) return; seen.add(name + '@' + at); defs.push({ name: name, kind: kind, at: at, recv: recv || null }); };
+  var P = {
+    js: [[/(?:^|[^.\w$])(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)\s*[<(]/g, 'function'],
+         [/(?:^|[^.\w$])(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=\n]+)?=\s*(?:async\s+)?(?:function\b|\([^()]*\)\s*(?::[^=\n]+)?=>|[A-Za-z_$][\w$]*\s*=>)/g, 'function'],
+         [/(?:^|[^.\w$])(?:export\s+)?(?:default\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/g, 'class'],
+         [/^[ \t]+(?:(?:public|private|protected|static|async|get|set|readonly|override)\s+)*([A-Za-z_$][\w$]*)\s*\([^()]*\)\s*(?::\s*[^{;=\n]+)?\{/gm, 'method']],
+    py: [[/^([ \t]*)(?:async\s+)?def\s+(\w+)\s*\(/gm, 'py'], [/^[ \t]*class\s+(\w+)/gm, 'class']],
+    go: [[/^func\s+(\([^)]*\)\s*)?(\w+)\s*[\[(]/gm, 'go'], [/^type\s+(\w+)\s+(?:struct|interface)\b/gm, 'class']],
+    rs: [[/^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:unsafe\s+)?(?:const\s+)?(?:extern\s+"[^"]*"\s+)?fn\s+(\w+)/gm, 'function'], [/^\s*(?:pub(?:\([^)]*\))?\s+)?(?:struct|enum|trait)\s+(\w+)/gm, 'class']],
+    php: [[/\bfunction\s+&?(\w+)\s*\(/g, 'function'], [/^\s*(?:abstract\s+|final\s+)?(?:class|interface|trait)\s+(\w+)/gm, 'class']],
+    gd: [[/^\s*(?:static\s+)?func\s+(\w+)/gm, 'function'], [/^(?:class_name|class)\s+(\w+)/gm, 'class']],
+    rb: [[/^\s*def\s+(?:self\.)?(\w+[?!]?)/gm, 'function'], [/^\s*(?:class|module)\s+(\w+)/gm, 'class']]
+  }[lang];
+  P.forEach(function (pt) {
+    each(pt[0], t, function (m) {
+      var at = m.index + m[0].length - m[0].replace(/^[^A-Za-z_$]*/, '').length;
+      if (pt[1] === 'py') add(m[2], m[1].length ? 'method' : 'function', m.index + m[1].length);
+      else if (pt[1] === 'go') { var rv = m[1] && /\(\s*(?:\w+\s+)?\*?\s*(\w+)/.exec(m[1]); add(m[2], m[1] ? 'method' : 'function', m.index, rv ? rv[1] : null); }
+      else add(m[1], pt[1], m.index + (m[0].length - m[0].trimStart().length));
+    });
+  });
+  defs.sort(function (a, b) { return a.at - b.at; });
+  // Where each body ends: matching braces (JS, Go, Rust, PHP), indentation (Python, GDScript), next definition (Ruby).
+  defs.forEach(function (d, i) {
+    var next = i + 1 < defs.length ? defs[i + 1].at : t.length;
+    if (/^(js|go|rs|php)$/.test(lang)) {
+      var o = t.indexOf('{', d.at), semi = t.indexOf(';', d.at), arrow = t.slice(d.at, Math.min(t.length, d.at + 300)).search(/=>\s*[^\s{]/);
+      if (o < 0 || o - d.at > 400 || (semi >= 0 && semi < o && arrow < 0)) { d.end = semi >= 0 && semi < next ? semi + 1 : next; return; }
+      if (arrow >= 0 && d.at + arrow < o) { var nl = t.indexOf('\n', d.at + arrow); d.end = nl < 0 ? t.length : nl; return; }
+      var depth = 0, k = o;
+      for (; k < t.length; k++) { var ch = t.charCodeAt(k); if (ch === 123) depth++; else if (ch === 125 && --depth === 0) break; }
+      d.end = k + 1;
+    } else if (lang === 'py' || lang === 'gd') {
+      var ls = t.lastIndexOf('\n', d.at - 1) + 1, ind = d.at - ls, nl0 = t.indexOf('\n', d.at);
+      d.end = t.length; if (nl0 < 0) return;
+      var re = /\n([ \t]*)(\S)/g; re.lastIndex = nl0;
+      var m; while ((m = re.exec(t))) { if (m[1].length <= ind) { d.end = m.index + 1; break; } }
+    } else d.end = next;
+  });
+  return { lang: lang, defs: defs, text: t };
+}
+function callRe(names) { return new RegExp('(?:^|[^\\w$])(' + names.map(function (n) { return n.replace(/[$?!]/g, '\\$&'); }).join('|') + ')(?=\\s*(?:\\(|::|\\.new\\b))', 'g'); }
+// A function handed over by name: items.map(row), on('click', save), { onload: init }
+function refRe(names) { return new RegExp('[(,:=]\\s*(' + names.map(function (n) { return n.replace(/[$?!]/g, '\\$&'); }).join('|') + ')(?=\\s*[),;}\\n])', 'g'); }
+// Graph of one file's functions. outFiles / inFiles: { path: source } for files it uses / files that use it.
+function insideGraph(path, src, outFiles, inFiles) {
+  var me = fileFunctions(path, src), defs = me.defs, t = me.text;
+  var nodes = [], edges = new Map(), byName = new Map();
+  var addEdge = function (a, b, how) { if (a !== b && !edges.has(a + '\u0000' + b)) edges.set(a + '\u0000' + b, { from: a, to: b, how: how }); };
+  var classes = defs.filter(function (d) { return d.kind === 'class'; });
+  defs.forEach(function (d, i) {
+    d.id = 'fn:' + d.name + (byName.has(d.name) ? '#' + i : '');
+    // Owner: a Go receiver type by name; otherwise the innermost class whose body contains the method.
+    if (d.recv) d.owner = classes.filter(function (c) { return c.name === d.recv; })[0] || null;
+    else if (d.kind !== 'class') d.owner = classes.filter(function (c) { return c.at < d.at && c.end > d.at; }).pop() || null;
+    (byName.get(d.name) || byName.set(d.name, []).get(d.name)).push(d);
+    nodes.push({ id: d.id, kind: 'file', sub: d.kind, label: d.name + (d.kind === 'class' ? '' : '()'), group: d.owner ? d.owner.name : d.kind === 'class' ? d.name : 'top level', unknown: 0 });
+  });
+  defs.forEach(function (d) { if (d.owner) addEdge(d.id, d.owner.id, 'belongs to'); });
+  // Innermost definition whose body contains pos (null = top level of the file).
+  var spanAt = function (pos) { var lo = 0, hi = defs.length - 1, f = -1; while (lo <= hi) { var mid = (lo + hi) >> 1; if (defs[mid].at <= pos) { f = mid; lo = mid + 1; } else hi = mid - 1; } for (; f >= 0; f--) if (defs[f].end > pos) return defs[f]; return null; };
+  // calls inside the file
+  if (defs.length) {
+    var names = Array.from(byName.keys());
+    each(callRe(names), t, function (m) {
+      var pos = m.index + m[0].indexOf(m[1]), from = spanAt(pos) || { id: 'fn:(top)' };
+      var targets = byName.get(m[1]); if (targets.some(function (x) { return x.at === pos || (x.at < pos && pos - x.at < m[1].length + 30 && x === from && t.slice(x.at, pos).indexOf('\n') < 0); })) return;
+      targets.slice(0, 3).forEach(function (to) { addEdge(from.id, to.id, 'calls'); });
+    });
+    each(refRe(names.filter(function (n) { return byName.get(n)[0].kind !== 'class'; })), t, function (m) {
+      var pos = m.index + m[0].lastIndexOf(m[1]), from = spanAt(pos) || { id: 'fn:(top)' };
+      byName.get(m[1]).slice(0, 3).forEach(function (to) { if (to.at !== pos) addEdge(from.id, to.id, 'calls'); });
+    });
+    // classes used by name (new X, X::, extends X, X.method)
+    defs.filter(function (d) { return d.kind === 'class'; }).forEach(function (c) {
+      each(new RegExp('(?:\\bnew\\s+|\\bextends\\s+|[(,:<]\\s*)' + c.name.replace(/\$/g, '\\$') + '\\b', 'g'), t, function (m) { var from = spanAt(m.index); if (from && from !== c) addEdge(from.id, c.id, 'uses'); });
+    });
+  }
+  // calls into other files this one uses — only when exactly one of them defines the name
+  var local = new Set(byName.keys()), ext = new Map();
+  Object.keys(outFiles || {}).forEach(function (f) { fileFunctions(f, outFiles[f]).defs.forEach(function (d) { if (!local.has(d.name)) { if (!ext.has(d.name)) ext.set(d.name, []); if (ext.get(d.name).indexOf(f) < 0) ext.get(d.name).push(f); } }); });
+  var extNames = Array.from(ext.keys()).filter(function (n) { return ext.get(n).length === 1; });
+  if (extNames.length && t) each(callRe(extNames), t, function (m) {
+    var from = spanAt(m.index + m[0].indexOf(m[1])), f = ext.get(m[1])[0], id = 'ext:' + f + '#' + m[1];
+    if (!nodes.some(function (n) { return n.id === id; })) nodes.push({ id: id, kind: 'package', sub: 'otherfile', label: m[1] + '()', where: f, group: 'outside', unknown: 0 });
+    addEdge(from ? from.id : 'fn:(top)', id, 'calls');
+  });
+  // other files that call into this one
+  var mine = defs.filter(function (d) { return d.kind !== 'method'; }).map(function (d) { return d.name; });
+  if (mine.length) Object.keys(inFiles || {}).forEach(function (f) {
+    var their = fileFunctions(f, inFiles[f]), theirNames = new Set(their.defs.map(function (d) { return d.name; })), hit = false;
+    each(callRe(mine), their.text || inFiles[f], function (m) {
+      if (theirNames.has(m[1])) return; hit = true;
+      byName.get(m[1]).forEach(function (to) { addEdge('in:' + f, to.id, 'calls'); });
+    });
+    if (hit) nodes.push({ id: 'in:' + f, kind: 'file', sub: 'callerfile', label: baseOf(f), where: f, group: 'files calling in', unknown: 0 });
+  });
+  // code at the top level of the file (outside any function) that calls things
+  if (Array.from(edges.values()).some(function (e) { return e.from === 'fn:(top)'; })) nodes.push({ id: 'fn:(top)', kind: 'file', sub: 'function', label: '(top level)', group: 'top level', unknown: 0 });
+  var ids = new Set(nodes.map(function (n) { return n.id; }));
+  return { nodes: nodes, edges: Array.from(edges.values()).filter(function (e) { return ids.has(e.from) && ids.has(e.to); }), missing: [], unknownTotal: 0, unknownFiles: [], builtinCount: 0, unusedDeps: [], lang: me.lang };
+}
 // ===== CORE END =====
 
 var SAMPLE = {
@@ -891,11 +1007,11 @@ var SAMPLE = {
   'js/store.js': "import { get, set } from 'idb-keyval';\nimport { emit } from './utils/events.js';\nexport const store = {};",
   'js/api/client.js': "import { token } from './auth.js';\nimport { retry } from '../utils/retry.js';\nexport const api = {};",
   'js/api/auth.js': "import { store } from '../store.js';\nexport const token = () => store.token;",
-  'js/ui/render.js': "import { fmt } from '../utils/format.js';\nexport function render(){}",
-  'js/ui/pages/home.js': "import { render } from '../render.js';\nimport { fmt } from '../../utils/format.js';\nimport dayjs from 'dayjs';\nexport default {};",
+  'js/ui/render.js': "import { fmt, fmtRange } from '../utils/format.js';\nexport function render(page) {\n  return layout(header(page) + list(page.items));\n}\nfunction header(p) {\n  return '<h1>' + p.title + '</h1><small>' + fmtRange(p.from, p.to) + '</small>';\n}\nfunction list(items) {\n  return '<ul>' + items.map(row).join('') + '</ul>';\n}\nfunction row(it) {\n  return '<li>' + escape(it.name) + ' · ' + fmt(it.when) + '</li>';\n}\nfunction escape(s) {\n  return String(s).replace(/</g, '&lt;');\n}\nfunction layout(html) {\n  return '<main>' + html + '</main>';\n}\nexport class Toast {\n  show(msg) { this.el = layout(escape(msg)); }\n}",
+  'js/ui/pages/home.js': "import { render } from '../render.js';\nimport { fmt } from '../../utils/format.js';\nimport dayjs from 'dayjs';\nexport default { show: () => render({ title: 'Home', items: [] }) };",
   'js/ui/pages/settings.js': "import { render } from '../render.js';\nimport { store } from '../../store.js';\nexport default {};",
   'js/ui/pages/billing.js': "import { render } from '../render.js';\nimport { api } from '../../api/client.js';\nexport default {};",
-  'js/utils/format.js': "import dayjs from 'dayjs';\nexport const fmt = d => dayjs(d).format('MMM D');",
+  'js/utils/format.js': "import dayjs from 'dayjs';\nexport const fmt = d => dayjs(d).format('MMM D');\nexport function fmtRange(a, b) {\n  return fmt(a) + ' – ' + fmt(b);\n}",
   'js/utils/retry.js': 'export const retry = fn => fn();',
   'tests/format.test.js': "import { fmt } from '../js/utils/format.js';\nimport { store } from '../js/store.js';\nconsole.assert(fmt('2026-01-02'));",
   'js/utils/events.js': 'export const emit = () => {};',
@@ -1156,7 +1272,8 @@ function start(res) {
   status('Mapping connections…', 0.96);
   var g = res.graph || buildGraph(res.files);
   if (res.meta.kind === 'account') S.lastAccount = res;
-  S.unit = res.meta.kind === 'account' ? 'repos' : 'files';
+  S.unit = res.meta.kind === 'account' ? 'repos' : res.meta.kind === 'inside' ? 'functions' : 'files';
+  if (res.files) { if (S.files !== res.files) insideCache.clear(); S.lastRepo = res; S.files = res.files; }
   if (!g.nodes.length) throw new Error('No readable text files found in this repo (only images or binaries?).');
   S.g = g; S.byId = linkUp(g); S.meta = res.meta; S.removed = new Set(); S.depth = new Map(); S.selected = null;
   if (res.meta.kind === 'account') g.nodes.forEach(function (n) { if (n.groups) n.group = n.groups[S.groupBy] || n.groups.family; });
@@ -1172,6 +1289,8 @@ function start(res) {
   S.labelSet = new Set(g.nodes.length <= 40 ? g.nodes.map(function (n) { return n.id; }) : ranked.slice(0, Math.min(14, Math.ceil(g.nodes.length / 6))).filter(function (n) { return n.inn.length > 0; }).map(function (n) { return n.id; }));
   if (g.nodes.length <= 40) S.labelSet = new Set(g.nodes.map(function (n) { return n.id; }));
   if (S.unit === 'repos') S.labelSet = new Set(g.nodes.filter(function (n) { return n.sub === 'repo' || n.inn.length > 2; }).map(function (n) { return n.id; }));
+  if (S.unit === 'functions') S.labelSet = new Set(g.nodes.map(function (n) { return n.id; }));
+  if (res.meta.kind === 'inside' && res.meta.focus) S.enterFrom = res.meta.focus;
   S.alpha = 1; S.touched = false; S.dirty = true;
   $('#status').style.display = 'none';
   $('#app').style.display = 'flex';
@@ -1229,18 +1348,21 @@ function fit() {
   if (S.unit === 'repos') y0 -= 34;
   var lgH = $('#legend').offsetHeight, bh = (S.time ? (W < 500 ? 64 : 58) : 0) + (lgH ? lgH + 6 : 0), h = H - bh;
   var k = Math.min(W / (x1 - x0 + 120), h / (y1 - y0 + 140), 2.2);
-  S.view.k = k; S.view.x = W / 2 - (x0 + x1) / 2 * k; S.view.y = h / 2 - (y0 + y1) / 2 * k;
+  S.view.k = k; S.view.x = W / 2 - (x0 + x1) / 2 * k; S.view.y = h / 2 - (y0 + y1) / 2 * k; S.fitK = k;
 }
 function shapePath(n) {
   var r = n.r;
   if (n.kind === 'package') { ctx.moveTo(n.x, n.y - r * 1.25); ctx.lineTo(n.x + r * 1.25, n.y); ctx.lineTo(n.x, n.y + r * 1.25); ctx.lineTo(n.x - r * 1.25, n.y); ctx.closePath(); }
+  else if (n.sub === 'class' || n.sub === 'callerfile') { var c = r * 1.05; if (ctx.roundRect) ctx.roundRect(n.x - c, n.y - c * 0.8, c * 2, c * 1.6, c * 0.3); else ctx.rect(n.x - c, n.y - c * 0.8, c * 2, c * 1.6); }
   else if (n.sub === 'repo') { var q = r * 0.95; if (ctx.roundRect) ctx.roundRect(n.x - q, n.y - q, q * 2, q * 2, q * 0.45); else ctx.rect(n.x - q, n.y - q, q * 2, q * 2); }
   else if (n.sub === 'doc') { var s = r * 0.9; if (ctx.roundRect) ctx.roundRect(n.x - s, n.y - s * 1.2, s * 2, s * 2.4, s * 0.35); else ctx.rect(n.x - s, n.y - s * 1.2, s * 2, s * 2.4); }
   else if (n.sub === 'config' || n.sub === 'workflow') { var t = r * 1.35; ctx.moveTo(n.x, n.y - t); ctx.lineTo(n.x + t * 0.95, n.y + t * 0.6); ctx.lineTo(n.x - t * 0.95, n.y + t * 0.6); ctx.closePath(); }
   else if (n.sub === 'script') { var hx = r * 1.15; for (var i = 0; i < 6; i++) { var a = Math.PI / 3 * i + Math.PI / 6; ctx[i ? 'lineTo' : 'moveTo'](n.x + Math.cos(a) * hx, n.y + Math.sin(a) * hx); } ctx.closePath(); }
   else ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
 }
-var SUB_LABEL = { repo: 'repository', code: 'code', page: 'web page', style: 'stylesheet', script: 'script', workflow: 'automation workflow', config: 'config', doc: 'document', package: 'outside package', tool: 'command-line tool', action: 'GitHub Action', image: 'container image', cdn: 'file from a CDN' };
+var SUB_LABEL = { function: 'function', method: 'method', class: 'class / type', otherfile: 'function in another file', callerfile: 'file that calls in', repo: 'repository', code: 'code', page: 'web page', style: 'stylesheet', script: 'script', workflow: 'automation workflow', config: 'config', doc: 'document', package: 'outside package', tool: 'command-line tool', action: 'GitHub Action', image: 'container image', cdn: 'file from a CDN' };
+function dispName(n) { if (S.unit === 'functions') return n.label + (n.where ? ' · ' + n.where : ''); return n.kind === 'package' || n.repo ? n.label : n.id; }
+function unitWord(k) { return S.unit === 'repos' ? (k === 1 ? 'repo' : 'repos') : S.unit === 'functions' ? (k === 1 ? 'function' : 'functions') : (k === 1 ? 'file' : 'files'); }
 function brokenNow(n, t) { if (!S.depth.has(n.id)) return false; return t - S.rippleT >= S.depth.get(n.id) * 140; }
 function draw(t) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -1372,13 +1494,17 @@ cv.addEventListener('pointermove', function (e) {
   if (n) {
     tip.style.display = 'block';
     tip.innerHTML = '';
-    tip.appendChild(el('b', { text: n.kind === 'package' || n.repo ? n.label : n.id }));
+    tip.appendChild(el('b', { text: dispName(n) }));
     tip.appendChild(el('span', { text: (SUB_LABEL[n.sub] || n.sub || '') + ' · used by ' + n.inn.length + ' · uses ' + n.out.length + (n.repo && n.repo.pushedT ? ' · last work ' + ago(n.repo.pushedT) : '') }));
     if (n.groups && S.groupBy === 'purpose') tip.appendChild(el('span', { style: 'display:block;color:var(--muted)', text: n.groups.purpose + (n.purposeWords.length ? ' · matched ' + n.purposeWords.join(', ') : '') }));
     if (n._h) tip.appendChild(el('span', { class: 'why', style: 'color:' + HEALTH_COLOR[n._h.level] }, [el('i'), el('span', { style: 'color:var(--text)', text: n._h.why })]));
     tip.style.left = Math.min(sx + 14, W - 290) + 'px'; tip.style.top = (sy + 14) + 'px';
     cv.style.cursor = 'pointer';
   } else { tip.style.display = 'none'; cv.style.cursor = 'grab'; }
+});
+cv.addEventListener('dblclick', function (e) {
+  var r = cv.getBoundingClientRect(), n = hit(e.clientX - r.left, e.clientY - r.top);
+  if (n && S.unit === 'files' && countInside(n)) lookInside(n);
 });
 cv.addEventListener('pointerup', function () {
   if (drag) { if (drag.n) drag.n.fixed = false; if (!drag.moved) select(drag.n ? drag.n.id : null); }
@@ -1389,7 +1515,45 @@ cv.addEventListener('wheel', function (e) {
   e.preventDefault();
   var r = cv.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0015));
 }, { passive: false });
+// ----- inside a file (Phase 5) -----
+var insideCache = new Map();
+function countInside(n) {
+  if (!S.files || S.files[n.id] == null || !langOf(n.id)) return 0;
+  if (!insideCache.has(n.id)) insideCache.set(n.id, fileFunctions(n.id, S.files[n.id]).defs);
+  return insideCache.get(n.id).length;
+}
+function insideWords(n) {
+  var d = insideCache.get(n.id) || [], c = d.filter(function (x) { return x.kind === 'class'; }).length, f = d.length - c;
+  return [f ? f + ' function' + (f === 1 ? '' : 's') : '', c ? c + ' class' + (c === 1 ? '' : 'es') : ''].filter(Boolean).join(' · ');
+}
+function lookInside(n) {
+  if (!countInside(n)) return;
+  var outF = {}, inF = {};
+  n.out.forEach(function (id) { if (S.files[id] != null) outF[id] = S.files[id]; });
+  n.inn.forEach(function (id) { if (S.files[id] != null) inF[id] = S.files[id]; });
+  S.lastG = { byId: S.byId, view: { x: S.view.x, y: S.view.y, k: S.view.k }, touched: S.touched };
+  var g = insideGraph(n.id, S.files[n.id], outF, inF);
+  var res = { graph: g, meta: { name: n.id, ref: 'inside one file · ' + (S.lastRepo ? S.lastRepo.meta.name : ''), kind: 'inside', focus: n.id } };
+  S.insideRes = res; var keep = S.lastRepo;
+  start(res); S.lastRepo = keep;
+  S.view.k *= 0.35; S.touched = false; S.zoomIn = performance.now();
+}
+function backToFiles() {
+  if (!S.lastRepo) return;
+  var from = S.meta.name, keep = S.lastG;
+  start(S.lastRepo);
+  var n = S.byId.get(from);
+  if (n) { select(n.id); }
+}
+var zoomGate = 0;
 function zoomAt(sx, sy, f) {
+  // Semantic zoom: keep zooming into a code file and you go inside it; zoom far out of a file and you're back to all files.
+  var now = performance.now();
+  if (f > 1 && S.unit === 'files' && S.view.k * f > 3.2 && now > zoomGate) {
+    var n = hit(sx, sy); if (!n) { var w = toWorld(sx, sy), bd = 1e9; S.nodes.forEach(function (m) { var d = Math.hypot(m.x - w.x, m.y - w.y); if (m.kind === 'file' && d < bd && d < 40) { bd = d; n = m; } }); }
+    if (n && n.kind === 'file' && countInside(n)) { zoomGate = now + 700; lookInside(n); return; }
+  }
+  if (f < 1 && S.unit === 'functions' && S.view.k * f < (S.fitK || 1) * 0.45 && now > zoomGate) { zoomGate = now + 700; backToFiles(); return; }
   var k = Math.max(0.15, Math.min(6, S.view.k * f)); f = k / S.view.k;
   S.view.x = sx - (sx - S.view.x) * f; S.view.y = sy - (sy - S.view.y) * f; S.view.k = k; S.touched = true; S.dirty = true;
 }
@@ -1428,7 +1592,9 @@ Array.prototype.forEach.call(document.querySelectorAll('#groupBy button'), funct
 function renderHead() {
   $('#repoName').textContent = S.meta.name;
   var back = $('#backBtn'); if (back) back.remove();
-  if (S.lastAccount && S.meta.kind !== 'account') {
+  if (S.meta.kind === 'inside') {
+    $('#repoName').parentNode.insertBefore(el('button', { id: 'backBtn', class: 'btn ghost', type: 'button', style: 'min-height:40px;padding:8px 14px', onclick: backToFiles }, ['← All files']), $('#repoName'));
+  } else if (S.lastAccount && S.meta.kind !== 'account') {
     $('#repoName').parentNode.insertBefore(el('button', { id: 'backBtn', class: 'btn ghost', type: 'button', style: 'min-height:40px;padding:8px 14px', onclick: function () { run(Promise.resolve(S.lastAccount)); } }, ['← All ' + S.lastAccount.meta.name + ' repos']), $('#repoName'));
   }
   var bits = [S.meta.ref];
@@ -1483,6 +1649,17 @@ function renderInsights() {
     if (famList.length) box.appendChild(insight('Families', famList.length, 'Repos sharing a name prefix are coloured together', famList.map(function (k) { return { label: k.replace(/ family$/, '') + ' · ' + fams[k] }; })));
     return;
   }
+  if (S.unit === 'functions') {
+    var loc = S.nodes.filter(function (n) { return /^(function|method|class)$/.test(n.sub) && n.id !== 'fn:(top)'; }), ext = S.nodes.filter(function (n) { return n.sub === 'otherfile'; }), callers = S.nodes.filter(function (n) { return n.sub === 'callerfile'; });
+    var nf = loc.filter(function (n) { return n.sub !== 'class'; }).length, nc = loc.length - nf;
+    box.appendChild(insight('Inside', nf + ' function' + (nf === 1 ? '' : 's') + (nc ? ' · ' + nc + ' class' + (nc === 1 ? '' : 'es') : ''), g.edges.filter(function (e) { return e.how === 'calls'; }).length + ' calls · ' + ext.length + ' into other files · ' + callers.length + ' file' + (callers.length === 1 ? '' : 's') + ' call in'));
+    var hot = loc.slice().sort(function (a, b) { return b.inn.length - a.inn.length; }).filter(function (n) { return n.inn.length; });
+    if (hot.length) box.appendChild(insight('Most called', hot[0].label, 'Switch it off to see ' + (rippleFrom([hot[0].id], S.byId).size - 1) + ' things break', hot.slice(0, 6).map(function (n) { return { id: n.id, label: n.label + ' · ' + n.inn.length }; })));
+    var idle = loc.filter(function (n) { return !n.inn.length && n.sub !== 'class'; });
+    box.appendChild(insight('Never called here', idle.length, idle.length ? 'Entry points, used by name elsewhere, or dead code' : 'Every function is called', idle.map(function (n) { return { id: n.id, label: n.label }; })));
+    if (callers.length) box.appendChild(insight('Files that call in', callers.length, 'Files that use this one’s functions', callers.map(function (n) { return { id: n.id, label: n.label, title: n.where }; })));
+    return;
+  }
   var files = S.nodes.filter(function (n) { return n.kind === 'file'; });
   var pkgs = S.nodes.filter(function (n) { return n.kind === 'package'; });
   var cnt = {}; files.forEach(function (n) { cnt[n.sub] = (cnt[n.sub] || 0) + 1; });
@@ -1504,7 +1681,7 @@ function renderInsights() {
 function renderLegend() {
   var lg = $('#legend'); lg.innerHTML = '';
   S.groupOrder.slice(0, S.unit === 'repos' ? 10 : 7).forEach(function (gname) { lg.appendChild(el('span', {}, [el('i', { style: 'background:' + S.groupColor[gname] }), gname + (S.unit === 'repos' ? ' ' + S.groupCount[gname] : '')])); });
-  lg.appendChild(el('span', {}, [el('i', { style: 'background:' + PKG_COLOR + ';border-radius:2px;transform:rotate(45deg)' }), 'outside']));
+  if (S.unit !== 'functions') lg.appendChild(el('span', {}, [el('i', { style: 'background:' + PKG_COLOR + ';border-radius:2px;transform:rotate(45deg)' }), 'outside']));
   if (S.unit === 'repos') {
     var rl = document.createElement('span');
     rl.innerHTML = '<svg width="230" height="12" viewBox="0 0 230 12" aria-hidden="true" style="flex:none"><g fill="#B9B3C9" font-size="11" font-family="DM Sans, sans-serif"><rect x="0.5" y="0.5" width="11" height="11" rx="3"/><text x="16" y="10">repo</text><line x1="52" y1="6" x2="68" y2="6" stroke="#B9B3C9"/><text x="72" y="10">uses / links</text><line x1="140" y1="6" x2="156" y2="6" stroke="#B9B3C9" stroke-dasharray="3 3"/><text x="160" y="10">mentions</text></g></svg>';
@@ -1514,6 +1691,13 @@ function renderLegend() {
     lg.appendChild(healthLegend());
     if (S.showGhosts && S.ghosts.length) { var gl2 = document.createElement('span'); gl2.innerHTML = '<svg width="22" height="8" viewBox="0 0 22 8" aria-hidden="true"><line x1="2" y1="4" x2="20" y2="4" stroke="#C9A0DC" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg>suggested link'; lg.appendChild(gl2); }
     if (S.time) lg.appendChild(el('span', {}, [el('i', { style: 'background:#FFE2A0;box-shadow:0 0 6px 3px rgba(255,226,160,.6)' }), 'worked on lately · faded = quiet for a year']));
+    return;
+  }
+  if (S.unit === 'functions') {
+    var fl = document.createElement('span');
+    fl.innerHTML = '<svg width="300" height="12" viewBox="0 0 300 12" aria-hidden="true" style="flex:none"><g fill="#B9B3C9" font-size="11" font-family="DM Sans, sans-serif"><circle cx="5" cy="6" r="4.5"/><text x="13" y="10">function</text><rect x="62" y="1.5" width="11" height="9" rx="2.5"/><text x="77" y="10">class · caller file</text><polygon points="178,1 183,6 178,11 173,6" fill="#F2C14E"/><text x="188" y="10">in another file</text></g></svg>';
+    fl.setAttribute('aria-label', 'Circle function, box class or calling file, diamond function in another file');
+    lg.appendChild(fl); lg.appendChild(el('span', {}, [el('i', { style: 'background:' + BREAK }), 'would break']));
     return;
   }
   var shp = document.createElement('span');
@@ -1534,7 +1718,7 @@ function renderPkgs() {
     var reach = rippleFrom([n.id], S.byId).size - 1;
     list.appendChild(el('div', { class: 'item' }, [
       el('button', { class: 'link', type: 'button', style: 'flex:1;min-width:0;padding:0', onclick: function () { select(n.id); centerOn(n); } }, [
-        el('span', { class: 't' }, [el('b', { text: n.label }), el('span', { text: (SUB_LABEL[n.sub] || '') + ' · used by ' + n.inn.length + ' · reaches ' + reach + ' ' + (S.unit === 'repos' ? 'repo' : 'file') + (reach === 1 ? '' : 's') })])
+        el('span', { class: 't' }, [el('b', { text: n.label }), el('span', { text: (SUB_LABEL[n.sub] || '') + ' · used by ' + n.inn.length + ' · reaches ' + reach + ' ' + unitWord(reach) })])
       ]),
       el('button', { class: 'sw', type: 'button', role: 'switch', 'aria-checked': on ? 'true' : 'false', 'aria-label': (on ? 'Remove ' : 'Restore ') + n.label, onclick: function () { setRemoved(n.id, on); } }, [el('i')])
     ]));
@@ -1546,7 +1730,8 @@ function renderSel() {
   p.hidden = false; p.innerHTML = '';
   var reach = rippleFrom([n.id], S.byId).size - 1, off = S.removed.has(n.id);
   p.appendChild(el('h3', { text: n.label }));
-  p.appendChild(el('span', { class: 'path', text: n.kind === 'package' ? 'Outside · ' + (SUB_LABEL[n.sub] || '') : n.repo ? (n.repo.lang || 'repository') + (n.group !== (n.repo.lang || 'Other') ? ' · ' + n.group : '') + (n.repo.archived ? ' · archived' : '') : n.id + ' · ' + (SUB_LABEL[n.sub] || '') }));
+  if (S.unit === 'functions') p.appendChild(el('span', { class: 'path', text: (SUB_LABEL[n.sub] || n.sub) + ' · ' + (n.where || S.meta.name) }));
+  else p.appendChild(el('span', { class: 'path', text: n.kind === 'package' ? 'Outside · ' + (SUB_LABEL[n.sub] || '') : n.repo ? (n.repo.lang || 'repository') + (n.group !== (n.repo.lang || 'Other') ? ' · ' + n.group : '') + (n.repo.archived ? ' · archived' : '') : n.id + ' · ' + (SUB_LABEL[n.sub] || '') }));
   if (n._h) p.appendChild(el('span', { class: 'why', style: 'color:' + HEALTH_COLOR[n._h.level] + ';font-size:14px' }, [el('i'), el('span', { style: 'color:var(--text)', text: HEALTH_WORD[n._h.level] + ' — ' + n._h.why })]));
   p.appendChild(el('div', { class: 'nums' }, [
     el('span', {}, [el('b', { text: String(n.inn.length) }), 'used by']),
@@ -1563,6 +1748,9 @@ function renderSel() {
       el('a', { class: 'btn ghost', href: n.repo.url, target: '_blank', rel: 'noopener', style: 'display:inline-flex;align-items:center;text-decoration:none' }, ['Open on GitHub'])
     ]));
   }
+  var inner = S.unit === 'files' && n.kind === 'file' ? countInside(n) : 0;
+  if (inner) p.appendChild(el('div', { class: 'row' }, [el('button', { class: 'btn teal', type: 'button', onclick: function () { lookInside(n); } }, ['Look inside · ' + insideWords(n)]), el('span', { class: 'hint', text: 'or zoom right in on it' })]));
+  if (n.where && S.unit === 'functions' && S.files && S.files[n.where] != null) p.appendChild(el('div', { class: 'row' }, [el('button', { class: 'btn ghost', type: 'button', onclick: function () { var f = S.lastG.byId.get(n.where); if (f) lookInside(f); } }, ['Look inside ' + baseOf(n.where)])]));
   p.appendChild(el('div', { class: 'row' }, [
     el('button', { class: off ? 'btn teal' : 'btn primary', type: 'button', onclick: function () { setRemoved(n.id, !off); } }, [off ? 'Bring it back' : 'Switch it off']),
     el('button', { class: 'btn ghost', type: 'button', onclick: function () { select(null); } }, ['Close'])
@@ -1578,7 +1766,7 @@ function renderSel() {
   }
   if (n.inn.length) {
     var grp = el('div', { class: 'grp' }, [el('div', { text: 'Used by' })]);
-    n.inn.slice(0, 12).forEach(function (id) { grp.appendChild(el('button', { class: 'link', type: 'button', onclick: function () { select(id); centerOn(S.byId.get(id)); } }, [S.byId.get(id).label + (S.unit === 'repos' ? '' : ' (' + id + ')') + ' · ' + (S.how.get(id + '\u0000' + n.id) || 'uses')])); });
+    n.inn.slice(0, 12).forEach(function (id) { grp.appendChild(el('button', { class: 'link', type: 'button', onclick: function () { select(id); centerOn(S.byId.get(id)); } }, [(S.unit === 'files' ? S.byId.get(id).label + ' (' + id + ')' : dispName(S.byId.get(id))) + ' · ' + (S.how.get(id + '\u0000' + n.id) || 'uses')])); });
     if (n.inn.length > 12) grp.appendChild(el('span', { class: 'hint', text: '+' + (n.inn.length - 12) + ' more' }));
     p.appendChild(grp);
   }
@@ -1593,7 +1781,7 @@ function renderImpact() {
   p.appendChild(el('h3', { text: 'The ripple' }));
   var big = el('div', { class: 'big' }); big.appendChild(el('b', { text: String(broken.length) })); big.appendChild(document.createTextNode(' of ' + total + ' ' + S.unit));
   p.appendChild(big);
-  p.appendChild(el('span', { class: 'hint', text: pct + (S.unit === 'repos' ? '% of these repos rely on it, directly or through another repo. Closest first.' : '% of the repo would break or need updating. Closest hits first.') }));
+  p.appendChild(el('span', { class: 'hint', text: pct + (S.unit === 'functions' ? '% of what’s in this file (and the files that call in) would break or need changing. Closest first.' : S.unit === 'repos' ? '% of these repos rely on it, directly or through another repo. Closest first.' : '% of the repo would break or need updating. Closest hits first.') }));
   ban.appendChild(el('div', {}, ['Switched off ' + S.removed.size + ' → ', el('b', { text: broken.length + ' ' + S.unit }), ' affected']));
   var chips = el('div', { class: 'row', style: 'gap:6px' });
   S.removed.forEach(function (id) { var n = S.byId.get(id); chips.appendChild(el('button', { class: 'chip', type: 'button', title: 'Bring back ' + n.label, onclick: function () { setRemoved(id, false); } }, ['✕ ' + n.label])); });
@@ -1604,7 +1792,7 @@ function renderImpact() {
   var list = el('div', { class: 'list' });
   Object.keys(byG).forEach(function (gname) {
     var grp = el('div', { class: 'grp' }, [el('div', { text: gname + ' · ' + byG[gname].length })]);
-    byG[gname].slice(0, 15).forEach(function (n) { grp.appendChild(el('button', { class: 'link', type: 'button', onclick: function () { select(n.id); centerOn(n); } }, [(n.repo ? n.label : n.id) + (S.depth.get(n.id) === 1 ? '  · direct' : '')])); });
+    byG[gname].slice(0, 15).forEach(function (n) { grp.appendChild(el('button', { class: 'link', type: 'button', onclick: function () { select(n.id); centerOn(n); } }, [dispName(n) + (S.depth.get(n.id) === 1 ? '  · direct' : '')])); });
     if (byG[gname].length > 15) grp.appendChild(el('span', { class: 'hint', text: '+' + (byG[gname].length - 15) + ' more' }));
     list.appendChild(grp);
   });
@@ -1617,7 +1805,7 @@ $('#q').addEventListener('input', function () {
   var q = this.value.trim().toLowerCase(), out = $('#results'); out.innerHTML = '';
   if (!q || !S.g) return;
   S.nodes.filter(function (n) { return n.id.toLowerCase().indexOf(q) >= 0; }).slice(0, 8).forEach(function (n) {
-    out.appendChild(el('button', { class: 'link', type: 'button', onclick: function () { select(n.id); centerOn(n); } }, [n.kind === 'package' ? n.label + ' (' + (SUB_LABEL[n.sub] || 'outside') + ')' : n.repo ? n.label : n.id]));
+    out.appendChild(el('button', { class: 'link', type: 'button', onclick: function () { select(n.id); centerOn(n); } }, [S.unit === 'functions' ? dispName(n) : n.kind === 'package' ? n.label + ' (' + (SUB_LABEL[n.sub] || 'outside') + ')' : n.repo ? n.label : n.id]));
   });
 });
 

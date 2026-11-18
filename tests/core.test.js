@@ -5,7 +5,7 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const script = html.split('<script>\n')[1].split('</script>\n</body>')[0];
 const core = script.split('// ===== CORE START =====')[1].split('// ===== UI =====')[0];
 const R = {};
-new Function('R', core + ';R.buildGraph=buildGraph;R.linkUp=linkUp;R.rippleFrom=rippleFrom;R.SAMPLE=SAMPLE;R.wanted=wanted;R.kindOf=kindOf;R.repoLook=repoLook;R.commitGlow=commitGlow;R.addedTimes=addedTimes;R.DAY=DAY;R.fileHealth=fileHealth;R.repoHealth=repoHealth;R.classifyPurpose=classifyPurpose;R.ghostLinks=ghostLinks;')(R);
+new Function('R', core + ';R.buildGraph=buildGraph;R.linkUp=linkUp;R.rippleFrom=rippleFrom;R.SAMPLE=SAMPLE;R.wanted=wanted;R.kindOf=kindOf;R.repoLook=repoLook;R.commitGlow=commitGlow;R.addedTimes=addedTimes;R.DAY=DAY;R.fileHealth=fileHealth;R.repoHealth=repoHealth;R.classifyPurpose=classifyPurpose;R.ghostLinks=ghostLinks;R.fileFunctions=fileFunctions;R.insideGraph=insideGraph;')(R);
 
 let passed = 0;
 function test(name, fn) { try { fn(); passed++; console.log('ok  ', name); } catch (e) { console.error('FAIL', name, '\n     ', e.message); process.exitCode = 1; } }
@@ -192,6 +192,36 @@ test('ghost links: similar READMEs pair up, with reasons; linked pairs and unrel
   assert(!g.some(x => x.a === 'cooking' || x.b === 'cooking'), 'nothing in common → no made-up link');
   const linked = R.ghostLinks(items, new Set(['gaze-board\u0000aac-kit']));
   assert(!linked.find(x => (x.a === 'gaze-board' && x.b === 'aac-kit') || (x.b === 'gaze-board' && x.a === 'aac-kit')), 'already linked → not suggested');
+});
+
+const names = (p, src) => R.fileFunctions(p, src).defs.map(d => d.kind[0] + ':' + d.name).join(' ');
+const callsIn = (g, a, b) => g.edges.some(e => e.from === a && e.to === b);
+
+test('inside: functions per language (JS/TS, Python, Go, Rust, PHP)', () => {
+  assert.strictEqual(names('a.ts', 'export async function load(x: string) {}\nconst save = async (a) => a\nclass Store {\n  private get(k: string): number { return 1 }\n}\nif (x) { y() }'), 'f:load f:save c:Store m:get');
+  assert.strictEqual(names('a.py', 'import os\nclass Box:\n    def open(self):\n        pass\ndef main():\n    Box().open()\n'), 'c:Box m:open f:main');
+  assert.strictEqual(names('a.go', 'package x\ntype Server struct{}\nfunc (s *Server) Handle(w int) {}\nfunc main() {}\n'), 'c:Server m:Handle f:main');
+  assert.strictEqual(names('a.rs', 'pub struct Gate;\nimpl Gate {\n    pub fn open(&self) {}\n}\nfn main() {}\n'), 'c:Gate f:open f:main');
+  assert.strictEqual(names('a.php', '<?php\nclass Cart {\n  public function total() {}\n}\nfunction helper($a) {}\n'), 'c:Cart f:total f:helper');
+  assert.strictEqual(names('a.md', '# nope'), '');
+});
+
+test('inside: calls, top-level code, other files, callers — and the ripple reaches callers', () => {
+  const g = R.insideGraph('js/ui/render.js', R.SAMPLE['js/ui/render.js'], { 'js/utils/format.js': R.SAMPLE['js/utils/format.js'] }, { 'js/ui/pages/home.js': R.SAMPLE['js/ui/pages/home.js'] });
+  assert(callsIn(g, 'fn:render', 'fn:layout') && callsIn(g, 'fn:render', 'fn:header') && callsIn(g, 'fn:list', 'fn:row'), 'calls inside the file');
+  assert(callsIn(g, 'fn:row', 'fn:escape') && callsIn(g, 'fn:show', 'fn:layout'), 'method calls');
+  assert(callsIn(g, 'fn:show', 'fn:Toast'), 'method belongs to its class');
+  assert(callsIn(g, 'fn:row', 'ext:js/utils/format.js#fmt') && callsIn(g, 'fn:header', 'ext:js/utils/format.js#fmtRange'), 'calls into another file');
+  assert(callsIn(g, 'in:js/ui/pages/home.js', 'fn:render'), 'a file that calls in');
+  assert(!callsIn(g, 'fn:render', 'fn:render'), 'a definition is not a call to itself');
+  const by = R.linkUp(g), d = R.rippleFrom(['fn:escape'], by);
+  ['fn:row', 'fn:list', 'fn:render', 'in:js/ui/pages/home.js', 'fn:show'].forEach(id => assert(d.has(id), 'ripple reaches ' + id));
+  assert(!d.has('fn:header'), 'header does not use escape');
+  const go = R.insideGraph('s.go', 'package x\ntype A struct{}\ntype B struct{}\nfunc (a *A) Run() { help() }\nfunc (b B) Stop() {}\nfunc help() {}\n', {}, {});
+  assert(callsIn(go, 'fn:Run', 'fn:A') && callsIn(go, 'fn:Stop', 'fn:B') && !callsIn(go, 'fn:Run', 'fn:B'), 'Go methods belong to their receiver type');
+  assert(callsIn(go, 'fn:Run', 'fn:help') && !callsIn(go, 'fn:help', 'fn:B'), 'plain functions belong to no type');
+  const py = R.insideGraph('m.py', 'def a():\n    b()\n\ndef b():\n    pass\n\nif __name__ == "__main__":\n    a()\n', {}, {});
+  assert(callsIn(py, 'fn:a', 'fn:b') && callsIn(py, 'fn:(top)', 'fn:a') && !callsIn(py, 'fn:b', 'fn:a'), 'Python body ends at dedent; top-level call');
 });
 
 console.log('\n' + passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));
