@@ -5,7 +5,7 @@ const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 const script = html.split('<script>\n')[1].split('</script>\n</body>')[0];
 const core = script.split('// ===== CORE START =====')[1].split('// ===== UI =====')[0];
 const R = {};
-new Function('R', core + ';R.buildGraph=buildGraph;R.linkUp=linkUp;R.rippleFrom=rippleFrom;R.SAMPLE=SAMPLE;R.wanted=wanted;R.kindOf=kindOf;')(R);
+new Function('R', core + ';R.buildGraph=buildGraph;R.linkUp=linkUp;R.rippleFrom=rippleFrom;R.SAMPLE=SAMPLE;R.wanted=wanted;R.kindOf=kindOf;R.repoLook=repoLook;R.commitGlow=commitGlow;R.addedTimes=addedTimes;R.DAY=DAY;')(R);
 
 let passed = 0;
 function test(name, fn) { try { fn(); passed++; console.log('ok  ', name); } catch (e) { console.error('FAIL', name, '\n     ', e.message); process.exitCode = 1; } }
@@ -117,6 +117,28 @@ test('file filter: text in, binaries and lockfiles out', () => {
   assert(!R.wanted('a.png', 1));
   assert(!R.wanted('package-lock.json', 1));
   assert(!R.wanted('node_modules/x/index.js', 1));
+});
+
+test('time: repo look (hidden before birth, glow when recent, fade when quiet)', () => {
+  const D = R.DAY, c = 1000 * D, p = 1400 * D;
+  assert.strictEqual(R.repoLook(c, p, c - D), null, 'not born yet');
+  assert(R.repoLook(c, p, c + D).born > 0.9, 'just born flashes');
+  assert.strictEqual(R.repoLook(c, p, c + 100 * D).glow, 0, 'before last push: no claim about activity');
+  assert(R.repoLook(c, p, p + 3 * D).glow > 0.9, 'recent push glows');
+  assert.strictEqual(R.repoLook(c, p, p + 100 * D).glow, 0);
+  assert(R.repoLook(c, p, p + 700 * D).alpha < 0.4, 'quiet for long: faded');
+  assert.strictEqual(R.repoLook(c, p, p + 30 * D).alpha, 1);
+});
+
+test('time: commit glow trail and first-seen times', () => {
+  const cs = [{ t: 1, files: [{ p: 'a.js', s: 'added' }] }, { t: 2 }, { t: 3, files: [{ p: 'b.js', s: 'added' }, { p: 'a.js', s: 'modified' }] }];
+  const g = R.commitGlow(cs, 2);
+  assert.strictEqual(g.get('b.js'), 1); assert.strictEqual(g.get('a.js'), 1);
+  const g0 = R.commitGlow(cs, 1);
+  assert(g0.get('a.js') > 0 && g0.get('a.js') < 1, 'older commits leave a fading trail');
+  assert(!g0.has('b.js'));
+  const a = R.addedTimes(cs);
+  assert.strictEqual(a.get('a.js'), 1); assert.strictEqual(a.get('b.js'), 3);
 });
 
 console.log('\n' + passed + ' passed' + (process.exitCode ? ', some FAILED' : ''));

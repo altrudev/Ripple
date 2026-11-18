@@ -11,7 +11,7 @@
 :root{--navy:#1E1A2E;--deep:#14111F;--panel:#28233C;--panel2:#221E35;--line:#3D3657;--text:#F4F1EC;--muted:#B9B3C9;--coral:#E8836A;--break:#FF7A59;--teal:#6BBFB0;--amber:#F2C14E}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--navy);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;font-size:15px;line-height:1.45}
-h1,h2,h3{font-family:Syne,sans-serif;margin:0;letter-spacing:-.01em}
+h1,h2,h3{font-family:'DM Sans',system-ui,sans-serif;font-weight:700;margin:0;letter-spacing:0}
 button,input{font:inherit;color:inherit}
 button{cursor:pointer}
 a{color:var(--teal)}
@@ -47,7 +47,7 @@ details .field{margin-top:8px;font-size:14px;min-height:44px}
 .insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-bottom:14px}
 .ins{background:var(--panel);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
 .ins .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:700}
-.ins .v{font-family:Syne,sans-serif;font-size:26px;font-weight:800;line-height:1.1}
+.ins .v{font-family:'DM Sans',system-ui,sans-serif;font-size:24px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums}
 .ins .d{font-size:13px;color:var(--muted)}
 .ins .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .chip{border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:4px 10px;font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -85,20 +85,37 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 .sw i{width:48px;height:28px;border-radius:999px;background:var(--teal);display:flex;align-items:center;justify-content:flex-end;padding:3px;transition:background .2s}
 .sw i::after{content:"";width:22px;height:22px;border-radius:999px;background:var(--text)}
 .sw[aria-checked="false"] i{background:var(--break);justify-content:flex-start}
-.impact .big{font-family:Syne,sans-serif;font-size:30px;font-weight:800;line-height:1.1}
+.impact .big{font-family:'DM Sans',system-ui,sans-serif;font-size:28px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums}
 .impact .big b{color:var(--break)}
 .grp{display:flex;flex-direction:column;gap:2px}
 .grp>div{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:6px}
 .sel .path{font-size:13px;color:var(--muted);word-break:break-all}
 .sel .nums{display:flex;gap:16px;font-size:14px}
-.sel .nums b{font-family:Syne,sans-serif;font-size:20px;display:block}
+.sel .nums b{font-family:'DM Sans',system-ui,sans-serif;font-weight:700;font-size:20px;display:block;font-variant-numeric:tabular-nums}
 .foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px;color:var(--muted);font-size:13px}
 #drop{position:fixed;inset:0;background:rgba(20,17,31,.88);display:none;align-items:center;justify-content:center;z-index:20;border:3px dashed var(--teal)}
-#drop div{font-family:Syne,sans-serif;font-size:28px}
+#drop div{font-family:'DM Sans',system-ui,sans-serif;font-weight:700;font-size:28px}
 #modal{position:fixed;inset:0;background:rgba(10,8,16,.75);display:none;align-items:center;justify-content:center;z-index:30;padding:16px}
 #modal .card{width:min(820px,100%);display:flex;flex-direction:column;gap:12px}
 #modal textarea{width:100%;height:50vh;background:var(--deep);color:var(--text);border:1.5px solid var(--line);border-radius:12px;padding:12px;font:12px/1.4 ui-monospace,Menlo,monospace}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* ---- Phase 1: time bar ---- */
+.timebar{position:absolute;left:12px;right:12px;bottom:12px;display:flex;align-items:center;gap:10px;background:rgba(20,17,31,.9);border:1px solid var(--line);border-radius:14px;padding:5px 12px 5px 5px;z-index:2}
+.timebar[hidden]{display:none}
+#tplay{flex:none;width:40px;height:40px;border-radius:10px;border:0;background:var(--teal);color:var(--navy);display:flex;align-items:center;justify-content:center}
+#tplay:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.ttrack{position:relative;flex:1;min-width:90px;height:40px}
+.ttrack canvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+.ttrack input{position:absolute;inset:0;width:100%;height:100%;margin:0;background:transparent;-webkit-appearance:none;appearance:none;cursor:pointer}
+.ttrack input::-webkit-slider-runnable-track{height:4px;background:rgba(61,54,87,.7);border-radius:4px}
+.ttrack input::-moz-range-track{height:4px;background:rgba(61,54,87,.7);border-radius:4px}
+.ttrack input::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;margin-top:-7px;border-radius:50%;background:var(--text);border:3px solid var(--teal)}
+.ttrack input::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--text);border:3px solid var(--teal)}
+.ttrack input:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:6px}
+#tlabel{flex:0 1 auto;max-width:46%;font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tlabel b{font-weight:700}
+#tlabel span{color:var(--muted)}
+.stage.has-time .legend{bottom:66px}
 /* ---- Phase 0: the app fits the window, nothing scrolls the page ---- */
 html,body{height:100%;overflow:hidden}
 .wrap{height:100vh;height:100dvh;max-width:none;display:flex;flex-direction:column;gap:10px;padding:12px 16px}
@@ -161,6 +178,8 @@ body.has-map #status{margin:0;flex-basis:100%}
   .handle i{width:36px;height:4px;border-radius:9px;background:var(--line)}
   .stage{border-radius:14px}
   .legend{display:none}
+  .timebar{left:8px;right:8px;bottom:60px}
+  #tlabel{max-width:52%;font-size:12px}
   .card{padding:16px}
 }
 </style>
@@ -213,6 +232,11 @@ body.has-map #status{margin:0;flex-basis:100%}
           <button type="button" id="zfit" aria-label="Fit map to screen"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 6V2h4M12 2h4v4M16 12v4h-4M6 16H2v-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
         </div>
         <div class="legend" id="legend"></div>
+        <div class="timebar" id="timebar" hidden>
+          <button type="button" id="tplay" aria-label="Play the history"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path id="tplayIcon" d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg></button>
+          <div class="ttrack"><canvas id="tticks" aria-hidden="true"></canvas><label class="sr" for="trange">Point in time</label><input type="range" id="trange" min="0" max="1000" step="1" value="1000"></div>
+          <span id="tlabel" aria-live="polite"></span>
+        </div>
         <div id="tip"></div>
       </div>
       <aside class="side" id="side">
@@ -697,6 +721,34 @@ function rippleFrom(ids, byId) {
   return depth;
 }
 var ENTRY_RE = /(^|\/)(index|main|app|server|cli|setup|manage|__main__|__init__|conftest|sw|service-worker|worker|mod|lib|[^\/]*\.config|[^\/]*\.test|[^\/]*\.spec|test_[^\/]*|[^\/]*_test)\.[^.\/]+$|\.html?$|(^|\/)(tests?|__tests__|spec|examples?|scripts|docs|bin|cmd)\//i;
+// ----- time (Phase 1) -----
+var DAY = 86400000;
+// How a repo looks at moment T, from what GitHub tells us (created_at, pushed_at). null = not born yet.
+function repoLook(created, pushed, T) {
+  if (!(created <= T)) return null;
+  var age = (T - created) / DAY, born = age < 40 ? 1 - age / 40 : 0;
+  if (!pushed || T < pushed) return { born: born, glow: 0, alpha: 1 };
+  var idle = (T - pushed) / DAY;
+  var glow = idle <= 30 ? 1 - idle / 60 : idle <= 75 ? 0.5 * (75 - idle) / 45 : 0;
+  var alpha = idle <= 180 ? 1 : idle >= 540 ? 0.32 : 1 - 0.68 * (idle - 180) / 360;
+  return { born: born, glow: glow, alpha: alpha };
+}
+// Commits sorted oldest first. Glow: files changed in commit i (1), then a fading trail of the 5 commits before it.
+function commitGlow(commits, i) {
+  var g = new Map();
+  for (var k = i, step = 0; k >= 0 && step < 6; k--, step++) {
+    if (!commits[k].files) continue;
+    var v = step === 0 ? 1 : 0.45 - step * 0.07;
+    commits[k].files.forEach(function (f) { if (!g.has(f.p) || g.get(f.p) < v) g.set(f.p, v); });
+  }
+  return g;
+}
+// First known time each file appeared (status 'added' in a loaded commit).
+function addedTimes(commits) {
+  var a = new Map();
+  commits.forEach(function (c) { (c.files || []).forEach(function (f) { if (f.s === 'added' && (!a.has(f.p) || c.t < a.get(f.p))) a.set(f.p, c.t); }); });
+  return a;
+}
 // ===== CORE END =====
 
 var SAMPLE = {
@@ -758,6 +810,16 @@ function gh(url, token, raw) {
     return raw ? r.text() : r.json();
   });
 }
+// Like gh(), but remembers GitHub's remaining hourly lookups so history never eats the visitor's budget.
+function ghRate(url, token) {
+  var h = { Accept: 'application/vnd.github+json' };
+  if (token) h.Authorization = 'Bearer ' + token;
+  return fetch(url, { headers: h }).then(function (r) {
+    var left = r.headers.get('x-ratelimit-remaining'); if (left != null) S.rateLeft = +left;
+    if (!r.ok) throw new Error('GitHub answered ' + r.status + '.');
+    return r.json();
+  });
+}
 function pool(items, n, fn, onStep) {
   var i = 0, done = 0;
   return new Promise(function (resolve) {
@@ -796,7 +858,11 @@ function loadGitHub(input, token) {
                         : 'https://raw.githubusercontent.com/' + r.owner + '/' + r.repo + '/' + tree.sha + '/' + f.path.split('/').map(encodeURIComponent).join('/');
         return (token ? gh(url, token, true) : fetch(url).then(function (x) { if (!x.ok) throw 0; return x.text(); })).then(function (t) { files[f.path] = t; });
       }, function (d) { status('Reading files… ' + d + ' of ' + pick.list.length, 0.08 + 0.85 * d / pick.list.length); }).then(function () {
-        return { files: files, meta: { name: r.owner + '/' + r.repo, ref: branch + ' @ ' + tree.sha.slice(0, 7), url: 'https://github.com/' + r.owner + '/' + r.repo, commit: tree.sha, capped: pick.capped, total: pick.total, truncated: tree.truncated, kind: 'github' } };
+        status('Reading recent history…', 0.95);
+        return ghRate(api + '/commits?per_page=100&sha=' + encodeURIComponent(branch), token).catch(function () { return null; });
+      }).then(function (list) {
+        var commits = Array.isArray(list) ? list.map(function (c) { var cm = c.commit || {}; return { sha: c.sha, t: Date.parse((cm.committer && cm.committer.date) || (cm.author && cm.author.date)) || 0, msg: (cm.message || '').split('\n')[0], who: c.author ? c.author.login : (cm.author && cm.author.name) || '' }; }).filter(function (c) { return c.t; }) : [];
+        return { files: files, meta: { name: r.owner + '/' + r.repo, ref: branch + ' @ ' + tree.sha.slice(0, 7), url: 'https://github.com/' + r.owner + '/' + r.repo, commit: tree.sha, capped: pick.capped, total: pick.total, truncated: tree.truncated, kind: 'github', api: api, commits: commits } };
       });
     });
   }).catch(function (e) {
@@ -885,7 +951,7 @@ function buildAccountGraph(owner, repos) {
     info.own.forEach(function (o) { ownPkg.set(o, r.name); });
     byName.set(r.name.toLowerCase(), r.name);
     nodes.push({ id: 'repo:' + r.name, kind: 'file', sub: 'repo', label: r.name, group: group, unknown: 0,
-      repo: { desc: r.description || '', lang: r.language || '', stars: r.stargazers_count || 0, pushed: (r.pushed_at || '').slice(0, 10), url: r.html_url, archived: r.archived, deps: info.deps.length, size: r.size || 0 } });
+      repo: { desc: r.description || '', lang: r.language || '', stars: r.stargazers_count || 0, pushed: (r.pushed_at || '').slice(0, 10), created: Date.parse(r.created_at) || 0, pushedT: Date.parse(r.pushed_at) || 0, url: r.html_url, archived: r.archived, deps: info.deps.length, size: r.size || 0 } });
   });
   var depUse = new Map();
   repos.forEach(function (r) {
@@ -944,6 +1010,7 @@ function start(res) {
   $('#status').style.display = 'none';
   $('#app').style.display = 'flex';
   document.body.classList.add('has-map');
+  setupTime(res);
   renderHead(); renderInsights(); renderLegend(); renderPkgs(); renderSel(); renderImpact();
   resize();
   $('#insPane').hidden = true; openSheet(false);
@@ -976,17 +1043,23 @@ function tick() {
 // ----- canvas -----
 var cv = $('#cv'), ctx = cv.getContext('2d'), W = 0, H = 0, DPR = 1;
 function resize() {
-  var r = $('#stage').getBoundingClientRect(); DPR = window.devicePixelRatio || 1;
+  var r = $('#stage').getBoundingClientRect(), oW = W, oH = H; DPR = window.devicePixelRatio || 1;
+  if (!r.width || !r.height) return;
+  var c = oW && oH ? toWorld(oW / 2, oH / 2) : null;
   W = r.width; H = r.height; cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
-  if (!S.touched) fit(); S.dirty = true;
+  if (!S.touched || !c) fit();
+  else { S.view.k *= Math.min(W / oW, H / oH); S.view.x = W / 2 - c.x * S.view.k; S.view.y = H / 2 - c.y * S.view.k; }
+  if (S.time) drawTicks();
+  if (S.g) draw(performance.now()); S.dirty = true;
 }
 if (window.ResizeObserver) new ResizeObserver(function () { if (S.g) resize(); }).observe($('#stage'));
 function fit() {
   if (!S.nodes.length || !W) return;
   var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   S.nodes.forEach(function (n) { x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y); x1 = Math.max(x1, n.x); y1 = Math.max(y1, n.y); });
-  var k = Math.min(W / (x1 - x0 + 120), H / (y1 - y0 + 140), 2.2);
-  S.view.k = k; S.view.x = W / 2 - (x0 + x1) / 2 * k; S.view.y = H / 2 - (y0 + y1) / 2 * k;
+  var bh = S.time ? (W < 500 ? 64 : 58) : 0, h = H - bh;
+  var k = Math.min(W / (x1 - x0 + 120), h / (y1 - y0 + 140), 2.2);
+  S.view.k = k; S.view.x = W / 2 - (x0 + x1) / 2 * k; S.view.y = h / 2 - (y0 + y1) / 2 * k;
 }
 function shapePath(n) {
   var r = n.r;
@@ -1007,6 +1080,7 @@ function draw(t) {
   var lw = 1 / v.k;
   ctx.lineWidth = lw;
   S.edges.forEach(function (e) {
+    if (e.s._hid || e.t._hid) return;
     var b = anyRemoved && brokenNow(e.s, t) && brokenNow(e.t, t);
     var hi = sel && (e.s === sel || e.t === sel);
     if (hi) { ctx.strokeStyle = e.s === sel ? 'rgba(107,191,176,.95)' : 'rgba(242,193,78,.9)'; ctx.lineWidth = lw * 2; }
@@ -1019,9 +1093,17 @@ function draw(t) {
   var neigh = new Set();
   if (sel) { sel.out.forEach(function (id) { neigh.add(id); }); sel.inn.forEach(function (id) { neigh.add(id); }); }
   S.nodes.forEach(function (n) {
+    if (n._hid) return;
     var isRem = S.removed.has(n.id), isB = anyRemoved && brokenNow(n, t);
     var dim = (anyRemoved && !isB) || (sel && n !== sel && !neigh.has(n.id) && !isB);
-    ctx.globalAlpha = dim ? 0.28 : 1;
+    if (n._glow > 0.02 && !dim) {
+      ctx.globalAlpha = 1; ctx.fillStyle = 'rgba(255,214,120,' + (0.2 * n._glow) + ')';
+      ctx.beginPath(); ctx.arc(n.x, n.y, n.r * 2.3 + 6 / v.k, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,226,150,' + (0.5 * n._glow) + ')';
+      ctx.beginPath(); ctx.arc(n.x, n.y, n.r * 1.55 + 2 / v.k, 0, Math.PI * 2); ctx.fill();
+    }
+    if (n._born > 0.02) { ctx.globalAlpha = n._born; ctx.strokeStyle = TEAL; ctx.lineWidth = lw * 2.5; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + (1 - n._born) * 26 / v.k + 3 / v.k, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.globalAlpha = (dim ? 0.28 : 1) * (n._ta == null ? 1 : n._ta);
     ctx.fillStyle = isB ? BREAK : n.color;
     ctx.beginPath();
     shapePath(n);
@@ -1034,9 +1116,10 @@ function draw(t) {
     }
   });
   ctx.globalAlpha = 1;
-  ctx.font = '500 ' + (12 / v.k) + 'px "DM Sans", sans-serif';
+  ctx.font = '600 ' + (13 / v.k) + 'px "DM Sans", system-ui, sans-serif';
   ctx.textBaseline = 'middle';
   S.nodes.forEach(function (n) {
+    if (n._hid) return;
     var show = S.labelSet.has(n.id) || n === sel || n.id === S.hover || S.removed.has(n.id) || (sel && neigh.has(n.id) && neigh.size < 30);
     if (!show) return;
     var tx = n.x + n.r + 5 / v.k, ty = n.y;
@@ -1048,6 +1131,7 @@ function loop(t) {
   if (S.g) {
     if (S.alpha > 0.02) { tick(); S.alpha *= 0.986; if (!S.touched) fit(); S.dirty = true; }
     if (S.removed.size && t - S.rippleT < (S.maxDepth + 2) * 140 + 700) S.dirty = true;
+    if (S.time && S.time.playing) playStep(t);
     if (S.dirty) { draw(t); S.dirty = false; }
   }
   requestAnimationFrame(loop);
@@ -1057,7 +1141,7 @@ requestAnimationFrame(loop);
 function toWorld(sx, sy) { return { x: (sx - S.view.x) / S.view.k, y: (sy - S.view.y) / S.view.k }; }
 function hit(sx, sy) {
   var w = toWorld(sx, sy), best = null, bd = 1e9;
-  S.nodes.forEach(function (n) { var dx = n.x - w.x, dy = n.y - w.y, d = Math.sqrt(dx * dx + dy * dy), lim = n.r + 6 / S.view.k; if (d < lim && d < bd) { bd = d; best = n; } });
+  S.nodes.forEach(function (n) { if (n._hid) return; var dx = n.x - w.x, dy = n.y - w.y, d = Math.sqrt(dx * dx + dy * dy), lim = n.r + 6 / S.view.k; if (d < lim && d < bd) { bd = d; best = n; } });
   return best;
 }
 var drag = null;
@@ -1086,7 +1170,7 @@ cv.addEventListener('pointermove', function (e) {
     tip.style.display = 'block';
     tip.innerHTML = '';
     tip.appendChild(el('b', { text: n.kind === 'package' || n.repo ? n.label : n.id }));
-    tip.appendChild(el('span', { text: (SUB_LABEL[n.sub] || n.sub || '') + ' · used by ' + n.inn.length + ' · uses ' + n.out.length }));
+    tip.appendChild(el('span', { text: (SUB_LABEL[n.sub] || n.sub || '') + ' · used by ' + n.inn.length + ' · uses ' + n.out.length + (n.repo && n.repo.pushedT ? ' · last work ' + ago(n.repo.pushedT) : '') }));
     tip.style.left = Math.min(sx + 14, W - 290) + 'px'; tip.style.top = (sy + 14) + 'px';
     cv.style.cursor = 'pointer';
   } else { tip.style.display = 'none'; cv.style.cursor = 'grab'; }
@@ -1121,6 +1205,19 @@ function setRemoved(id, off) {
 
 // ----- panels -----
 function fileCount() { return S.nodes.filter(function (n) { return n.kind === 'file'; }).length; }
+var D0 = Date.UTC(2026, 6, 1);
+var SAMPLE_HISTORY = [
+  { msg: 'First version: page, app shell and store', d: 0, files: ['index.html:added', 'js/app.js:added', 'js/store.js:added', 'js/ui/render.js:added', 'package.json:added'] },
+  { msg: 'Add router and pages', d: 9, files: ['js/router.js:added', 'js/ui/pages/home.js:added', 'js/ui/pages/settings.js:added', 'js/app.js:modified'] },
+  { msg: 'Date formatting with dayjs', d: 16, files: ['js/utils/format.js:added', 'js/ui/render.js:modified', 'package.json:modified'] },
+  { msg: 'Talk to the API, with retries', d: 27, files: ['js/api/client.js:added', 'js/api/auth.js:added', 'js/utils/retry.js:added', 'js/utils/events.js:added', 'js/store.js:modified'] },
+  { msg: 'Charts for the old dashboard', d: 35, files: ['js/legacy/old-chart.js:added', 'package.json:modified'] },
+  { msg: 'Work offline (service worker)', d: 48, files: ['sw.js:added', 'js/sw-cache.js:added', 'js/app.js:modified', 'index.html:modified'] },
+  { msg: 'Billing page', d: 61, files: ['js/ui/pages/billing.js:added', 'js/router.js:modified'] },
+  { msg: 'Dark theme (half done)', d: 70, files: ['js/utils/theme.js:added', 'js/ui/pages/home.js:modified'] }
+];
+function sampleCommits() { return SAMPLE_HISTORY.map(function (c, i) { return { sha: 'example' + i, t: D0 + c.d * DAY, msg: c.msg, files: c.files.map(function (x) { var k = x.lastIndexOf(':'); return { p: x.slice(0, k), s: x.slice(k + 1) }; }) }; }); }
+
 function renderHead() {
   $('#repoName').textContent = S.meta.name;
   var back = $('#backBtn'); if (back) back.remove();
@@ -1197,6 +1294,7 @@ function renderLegend() {
     rl.setAttribute('aria-label', 'Rounded square: repo. Solid line: uses or links. Dashed line: mentions');
     lg.appendChild(rl);
     lg.appendChild(el('span', {}, [el('i', { style: 'background:' + BREAK }), 'would break']));
+    if (S.time) lg.appendChild(el('span', {}, [el('i', { style: 'background:#FFE2A0;box-shadow:0 0 6px 3px rgba(255,226,160,.6)' }), 'worked on lately · faded = quiet for a year']));
     return;
   }
   var shp = document.createElement('span');
@@ -1204,6 +1302,7 @@ function renderLegend() {
   shp.setAttribute('aria-label', 'Shapes: circle code, hexagon script, triangle config, page doc, dashed line mention');
   lg.appendChild(shp);
   lg.appendChild(el('span', {}, [el('i', { style: 'background:' + BREAK }), 'would break']));
+  if (S.time) lg.appendChild(el('span', {}, [el('i', { style: 'background:#FFE2A0;box-shadow:0 0 6px 3px rgba(255,226,160,.6)' }), 'changed in this commit']));
 }
 function renderPkgs() {
   var f = ($('#pq').value || '').toLowerCase();
@@ -1232,10 +1331,11 @@ function renderSel() {
     el('span', {}, [el('b', { text: String(n.inn.length) }), 'used by']),
     n.kind === 'file' ? el('span', {}, [el('b', { text: String(n.out.length) }), 'uses']) : null,
     el('span', {}, [el('b', { text: String(reach) }), 'would feel it']),
-    n.repo ? el('span', {}, [el('b', { text: '★ ' + n.repo.stars }), n.repo.pushed]) : null
+    n.repo ? el('span', {}, [el('b', { text: '★ ' + n.repo.stars }), 'stars']) : null
   ]));
   if (n.repo) {
     if (n.repo.desc) p.appendChild(el('span', { class: 'hint', text: n.repo.desc }));
+    if (n.repo.created) p.appendChild(el('span', { class: 'hint', text: 'Started ' + fmtDay(n.repo.created) + ' · last work ' + ago(n.repo.pushedT) }));
     p.appendChild(el('div', { class: 'row' }, [
       el('button', { class: 'btn teal', type: 'button', onclick: function () { run(loadGitHub(S.meta.owner + '/' + n.label, $('#token').value.trim())); } }, ['Map its files']),
       el('a', { class: 'btn ghost', href: n.repo.url, target: '_blank', rel: 'noopener', style: 'display:inline-flex;align-items:center;text-decoration:none' }, ['Open on GitHub'])
@@ -1291,6 +1391,151 @@ $('#q').addEventListener('input', function () {
 });
 
 // ----- engine model export -----
+// ----- time bar (Phase 1) -----
+var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function fmtMonth(t) { var d = new Date(t); return MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+function fmtDay(t) { var d = new Date(t); return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
+function ago(t) {
+  var d = Math.floor((Date.now() - t) / DAY);
+  if (!t) return 'unknown'; if (d < 1) return 'today'; if (d < 2) return 'yesterday'; if (d < 45) return d + ' days ago';
+  if (d < 550) return Math.round(d / 30.4) + ' months ago'; return (d / 365).toFixed(1).replace(/\.0$/, '') + ' years ago';
+}
+function setupTime(res) {
+  S.nodes.forEach(function (n) { n._hid = false; n._glow = 0; n._born = 0; n._ta = 1; });
+  S.time = null;
+  var tb = $('#timebar'), st = $('#stage'), rg = $('#trange');
+  if (S.unit === 'repos') {
+    var reps = S.nodes.filter(function (n) { return n.repo && n.repo.created; });
+    if (reps.length >= 2) {
+      var t0 = Math.min.apply(null, reps.map(function (n) { return n.repo.created; })), t1 = Date.now();
+      S.time = { mode: 'account', t0: t0, t1: t1, T: t1, ticks: reps.map(function (n) { return n.repo.created; }) };
+      rg.min = 0; rg.max = 1000; rg.value = 1000;
+    }
+  } else if (res.meta.commits && res.meta.commits.length) {
+    var cs = res.meta.commits.slice().sort(function (a, b) { return a.t - b.t; });
+    S.time = { mode: 'repo', commits: cs, idx: cs.length - 1, api: res.meta.api || null, added: addedTimes(cs) };
+    rg.min = 0; rg.max = cs.length - 1; rg.value = cs.length - 1;
+  }
+  tb.hidden = !S.time; st.classList.toggle('has-time', !!S.time); setPlayIcon(false);
+  if (!S.time) return;
+  rg.setAttribute('aria-valuetext', '');
+  applyTime();
+  if (S.time.mode === 'repo') fetchCommit(S.time.commits[S.time.idx], true);
+  requestAnimationFrame(drawTicks);
+}
+function applyTime() {
+  var tm = S.time; if (!tm) return;
+  if (tm.mode === 'account') {
+    var shown = 0;
+    S.nodes.forEach(function (n) {
+      if (!n.repo) return;
+      var lk = repoLook(n.repo.created, n.repo.pushedT, tm.T);
+      n._hid = !lk; n._glow = lk ? lk.glow : 0; n._born = lk && tm.T < tm.t1 - DAY ? lk.born : 0; n._ta = lk ? lk.alpha : 1;
+      if (lk) shown++;
+    });
+    S.nodes.forEach(function (n) { if (n.kind === 'package') n._hid = !n.inn.some(function (id) { return !S.byId.get(id)._hid; }); });
+    tm.shown = shown;
+  } else {
+    var c = tm.commits[tm.idx], glow = commitGlow(tm.commits, tm.idx);
+    S.nodes.forEach(function (n) {
+      if (n.kind !== 'file') return;
+      var a = tm.added.get(n.id);
+      n._hid = a != null && a > c.t; n._glow = glow.get(n.id) || 0;
+    });
+    S.nodes.forEach(function (n) { if (n.kind === 'package') n._hid = n.inn.length > 0 && n.inn.every(function (id) { return S.byId.get(id)._hid; }); });
+  }
+  timeLabel(); S.dirty = true;
+}
+function timeLabel() {
+  var tm = S.time, lab = $('#tlabel'), rg = $('#trange'), txt;
+  if (tm.mode === 'account') {
+    var now = tm.T >= tm.t1 - DAY;
+    lab.innerHTML = ''; lab.appendChild(el('b', { text: now ? 'Today' : fmtMonth(tm.T) })); lab.appendChild(el('span', { text: ' · ' + tm.shown + ' repo' + (tm.shown === 1 ? '' : 's') + (now ? ' · glow = recent work' : '') }));
+    txt = (now ? 'Today' : fmtMonth(tm.T)) + ', ' + tm.shown + ' repos';
+  } else {
+    var c = tm.commits[tm.idx];
+    var extra = c.files ? ' · ' + c.files.length + ' file' + (c.files.length === 1 ? '' : 's') + ' changed' : c.loading ? ' · loading…' : c.blocked ? ' · add a token to see its files' : c.failed ? ' · files unavailable' : '';
+    lab.innerHTML = ''; lab.title = c.msg;
+    lab.appendChild(el('b', { text: (tm.idx === tm.commits.length - 1 ? 'Latest' : fmtDay(c.t)) })); lab.appendChild(el('span', { text: ' · ' + c.msg + extra }));
+    txt = 'Commit ' + (tm.idx + 1) + ' of ' + tm.commits.length + ', ' + fmtDay(c.t) + ': ' + c.msg + extra;
+  }
+  rg.setAttribute('aria-valuetext', txt);
+}
+function fetchCommit(c, quiet) {
+  var tm = S.time; if (!tm || !c || c.files || c.loading || c.failed || !tm.api) return;
+  var tok = $('#token').value.trim();
+  if (!tok && S.rateLeft != null && S.rateLeft < (quiet ? 15 : 6)) { c.blocked = true; if (!quiet) timeLabel(); drawTicks(); return; }
+  c.loading = true; c.blocked = false; timeLabel();
+  ghRate(tm.api + '/commits/' + c.sha, tok).then(function (j) {
+    c.files = (j.files || []).map(function (f) { return { p: f.filename, s: f.status }; });
+  }).catch(function () { c.failed = true; }).then(function () {
+    c.loading = false;
+    if (S.time !== tm) return;
+    tm.added = addedTimes(tm.commits); applyTime(); drawTicks();
+  });
+}
+var timeWait = 0;
+$('#trange').addEventListener('input', function () {
+  var tm = S.time; if (!tm) return;
+  stopPlay();
+  if (tm.mode === 'account') tm.T = tm.t0 + (tm.t1 - tm.t0) * (+this.value / 1000);
+  else {
+    tm.idx = +this.value;
+    clearTimeout(timeWait); var c = tm.commits[tm.idx];
+    timeWait = setTimeout(function () { fetchCommit(c); }, 350);
+  }
+  applyTime();
+});
+function setPlayIcon(on) {
+  $('#tplayIcon').setAttribute('d', on ? 'M4 2.5h3v11H4zM9 2.5h3v11H9z' : 'M4 2.5v11l9-5.5z');
+  $('#tplay').setAttribute('aria-label', on ? 'Pause' : 'Play the history');
+}
+function stopPlay() { if (S.time && S.time.playing) { S.time.playing = false; setPlayIcon(false); } }
+$('#tplay').addEventListener('click', function () {
+  var tm = S.time; if (!tm) return;
+  if (tm.playing) { stopPlay(); return; }
+  if (tm.mode === 'account') { if (tm.T >= tm.t1 - DAY) tm.T = tm.t0; }
+  else if (tm.idx >= tm.commits.length - 1) tm.idx = 0;
+  tm.playing = true; tm.last = 0; tm.acc = 0; setPlayIcon(true);
+  if (tm.mode === 'repo') fetchCommit(tm.commits[tm.idx]);
+  applyTime(); syncRange();
+});
+function syncRange() { var tm = S.time; $('#trange').value = tm.mode === 'account' ? Math.round((tm.T - tm.t0) / (tm.t1 - tm.t0) * 1000) : tm.idx; }
+function playStep(t) {
+  var tm = S.time, dt = tm.last ? Math.min(100, t - tm.last) : 16; tm.last = t;
+  if (tm.mode === 'account') {
+    tm.T = Math.min(tm.t1, tm.T + (tm.t1 - tm.t0) * dt / 10000);
+    if (tm.T >= tm.t1) { tm.T = tm.t1; stopPlay(); }
+  } else {
+    tm.acc += dt;
+    if (tm.acc < 900) { S.dirty = true; return; }
+    tm.acc = 0;
+    if (tm.idx >= tm.commits.length - 1) { stopPlay(); return; }
+    tm.idx++; fetchCommit(tm.commits[tm.idx]);
+    if (tm.idx >= tm.commits.length - 1) stopPlay();
+  }
+  applyTime(); syncRange();
+}
+function drawTicks() {
+  var tm = S.time; if (!tm) return;
+  var c = $('#tticks'), r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  if (!r.width) return;
+  c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
+  var x = c.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, r.width, r.height);
+  var pad = 9, w = r.width - pad * 2, mid = r.height / 2;
+  if (tm.mode === 'account') {
+    x.fillStyle = 'rgba(107,191,176,.75)';
+    tm.ticks.forEach(function (tt) { var px = pad + (tt - tm.t0) / (tm.t1 - tm.t0) * w; x.fillRect(Math.round(px) - 1, mid - 11, 2, 7); });
+    var y0 = new Date(tm.t0).getFullYear() + 1, y1 = new Date(tm.t1).getFullYear();
+    x.fillStyle = 'rgba(185,179,201,.75)'; x.font = '600 10px "DM Sans", system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+    var step = Math.max(1, Math.ceil((y1 - y0 + 1) / Math.max(1, Math.floor(w / 46))));
+    for (var y = y0; y <= y1; y += step) { var px2 = pad + (Date.UTC(y, 0, 1) - tm.t0) / (tm.t1 - tm.t0) * w; if (px2 > pad + 14 && px2 < pad + w - 14) x.fillText(String(y), px2, r.height - 2); }
+  } else {
+    var n = tm.commits.length;
+    tm.commits.forEach(function (cm, i) { var px = pad + (n > 1 ? i / (n - 1) : 1) * w; x.fillStyle = cm.files ? 'rgba(255,226,160,.9)' : 'rgba(185,179,201,.45)'; x.fillRect(Math.round(px) - 1, mid - (cm.files ? 12 : 9), 2, cm.files ? 8 : 5); });
+  }
+}
+
 function engineModel() {
   var pk = S.nodes.filter(function (n) { return n.kind === 'package'; });
   var leverIds = new Set(pk.map(function (n) { return n.id; })); S.removed.forEach(function (id) { leverIds.add(id); });
@@ -1324,7 +1569,7 @@ $('#form').addEventListener('submit', function (e) {
   var u = $('#url').value; if (!u.trim()) { $('#url').focus(); return; }
   run(loadGitHub(u, $('#token').value.trim()));
 });
-$('#sample').onclick = function () { run(Promise.resolve({ files: SAMPLE, meta: { name: 'Example: a small web app', ref: 'built-in example — paste your own repo above', kind: 'sample' } })); };
+$('#sample').onclick = function () { run(Promise.resolve({ files: SAMPLE, meta: { name: 'Example: a small web app', ref: 'built-in example — paste your own repo above', kind: 'sample', commits: sampleCommits() } })); };
 $('#sample').click();
 $('#zip').addEventListener('change', function () { if (this.files[0]) run(loadZip(this.files[0])); this.value = ''; });
 var dragDepth = 0;

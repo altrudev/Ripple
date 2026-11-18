@@ -1,6 +1,6 @@
 # Ripple — Roadmap
 
-Last updated: 2026-11-18 · Current version: **v0.3 (live)** — Phase 0 done, 21 languages
+Last updated: 2026-11-18 · Current version: **v0.4 (live)** — Phases 0–1 done, 21 languages
 
 Ripple's idea in one line: *code becomes visual objects; flip a switch, see the consequence.*
 The goal of the next versions is to make the map feel **alive** (time, health), **meaningful** (purpose, ghost links) and **actionable** (what to fix next) — and to put it on the altru.dev homepage as a living portfolio.
@@ -20,6 +20,8 @@ The goal of the next versions is to make the map feel **alive** (time, health), 
 | Engine model export | ✅ JSON: nodes, edges (typed), levers, effects, snapshot |
 | Languages | ✅ 21: JavaScript, TypeScript, Python, Go, Rust, Java, Kotlin, Scala, C, C++, C#, PHP, Ruby, Swift, Dart, Lua, Solidity, GDScript, Shell, HTML, CSS (+ Vue/Svelte, workflows/YAML, Dockerfile, Markdown, Godot scenes, manifests, universal "mentions"). Listed on the page itself |
 | Layout (Phase 0) | ✅ v0.3: fits the window at every size, no page scroll; compact top bar + one-line tagline + language chips; opens straight onto an example map; insight strip opens details in the side panel; phone = full map + bottom sheet |
+| Time (Phase 1) | ✅ v0.4: time bar under the map. Account: slider from first repo to today, repos appear at birth (teal ring), glow = pushed in the last ~month, fade = quiet 6–18 months; Play animates the history. Repo: 1 extra call for the last 100 commits; each commit's changed files light up (1 call per commit, fetched on demand, stops before the visitor's hourly limit runs low); files appear when first added. Example map has a built-in 8-commit history |
+| Readability + resize | ✅ v0.4: numbers and headings in DM Sans (Syne kept only for the logo); map labels 13px semibold; the map follows window resizes and keeps your zoom/position centred |
 | Hosting | ✅ altru.dev/apps/ripple/try (static), product page altru.dev/apps/ripple (featured) |
 | Tests | ✅ `tests/core.test.js` (Node, no deps). Browser tests were run ad hoc with Playwright — not yet in repo |
 
@@ -51,11 +53,12 @@ UI rule (applies to every phase): *simple on the surface, meaningful detail on d
 - Phone: map fills the screen, panel is a draggable bottom sheet.
 - **Done when:** at 1366×768, 1920×1080 and 390×844 the document never scrolls (`document.scrollingElement.scrollHeight === innerHeight`), all features reachable.
 
-## Phase 1 — Time (the map breathes)
+## Phase 1 — Time (the map breathes) — ✅ shipped in v0.4
 
 - **Account:** timeline slider from first `created_at` to today. Repos appear at birth; glow intensity = recency of `pushed_at`; untouched repos fade. Play button animates the history. *(Data already in the one repo-list call.)*
 - **Repo:** commit timeline from `/repos/{o}/{r}/commits?per_page=100` (1 call). File-level "first seen / last touched" needs per-commit file lists → token-only, or via the snapshot service (Phase 7).
-- **Done when:** dragging the slider re-renders in <16 ms per frame for 100 repos; activity glow visible without explanation.
+- **Done when:** dragging the slider re-renders in <16 ms per frame for 100 repos; activity glow visible without explanation. *(Measured: under 1 ms per frame for 100 repos.)*
+- Honest limit: GitHub only gives each repo's *last* push, so before that date the map makes no claim about activity (no glow, no fade).
 
 ## Phase 2 — Health (vital-sign rings)
 
