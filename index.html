@@ -38,8 +38,8 @@ details .field{margin-top:8px;font-size:14px;min-height:44px}
 #status{margin-top:16px;display:none}
 #status .msg{font-size:14px;color:var(--muted)}
 #status.err .msg{color:#FFB4A0}
-.bar{height:6px;border-radius:999px;background:var(--deep);overflow:hidden;margin-top:8px}
-.bar i{display:block;height:100%;width:0;background:var(--teal);transition:width .2s}
+.pbar{height:6px;border-radius:999px;background:var(--deep);overflow:hidden;margin-top:8px}
+.pbar i{display:block;height:100%;width:0;background:var(--teal);transition:width .2s}
 #app{display:none;margin-top:18px}
 .repohead{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:14px}
 .repohead h2{font-size:24px}
@@ -99,11 +99,75 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #modal .card{width:min(820px,100%);display:flex;flex-direction:column;gap:12px}
 #modal textarea{width:100%;height:50vh;background:var(--deep);color:var(--text);border:1.5px solid var(--line);border-radius:12px;padding:12px;font:12px/1.4 ui-monospace,Menlo,monospace}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-@media (max-width:640px){.wrap{padding:14px}.card{padding:18px}.stage{height:62vh}}
+/* ---- Phase 0: the app fits the window, nothing scrolls the page ---- */
+html,body{height:100%;overflow:hidden}
+.wrap{height:100vh;height:100dvh;max-width:none;display:flex;flex-direction:column;gap:10px;padding:12px 16px}
+.bar{flex:none;display:flex;flex-direction:column;gap:14px}
+.top{margin:0}
+body.has-map .bar{flex-direction:row;align-items:center;gap:14px}
+body.has-map .bar .top{flex:none}
+body.has-map .brand small{display:none}
+body.has-map .start{flex:1;min-width:0;padding:8px 10px;border-radius:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+body.has-map .start h1,body.has-map .start p{display:none}
+body.has-map .start form{flex:1;min-width:0;flex-wrap:nowrap}
+body.has-map .start .field{min-height:42px;padding:8px 12px;font-size:14px}
+body.has-map .start .btn{min-height:42px;padding:8px 14px}
+body.has-map .start .or{display:none}
+body.has-map details{margin:0}
+body.has-map details summary{min-height:42px;font-size:0}
+body.has-map details summary::after{content:'Token';font-size:13px}
+body.has-map details[open]{position:absolute;right:16px;top:64px;z-index:15;background:var(--panel);padding:10px 14px;border-radius:12px;border:1px solid var(--line);width:min(420px,90vw)}
+body.has-map #status{margin:0;flex-basis:100%}
+#app{flex:1;min-height:0;flex-direction:column;gap:10px;margin:0}
+.intro{flex:none;display:flex;flex-direction:column;gap:6px;min-width:0}
+.intro h1{font-size:15px;font-weight:700;margin:0;line-height:1.3}
+.intro h1 span{color:var(--muted);font-weight:600}
+.langs{list-style:none;margin:0;padding:0;display:flex;gap:5px;overflow-x:auto;white-space:nowrap;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 92%,transparent);mask-image:linear-gradient(90deg,#000 92%,transparent)}
+.langs::-webkit-scrollbar{display:none}
+.langs li{flex:none;font-size:12px;line-height:1;padding:5px 9px;border-radius:999px;background:var(--panel);color:#D8D3E4}
+.langs li.lab{background:none;padding-left:0;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em;font-size:11px}
+.langs li.also{background:none;color:var(--muted)}
+.repohead span.example{color:var(--teal)}
+.repohead{flex:none;margin:0;align-items:center}
+.repohead h2{font-size:20px}
+.insights{flex:none;display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;margin:0;padding-bottom:2px;scrollbar-width:thin}
+.ins{flex:0 0 auto;width:auto;min-width:180px;max-width:300px;padding:9px 12px;gap:2px;cursor:pointer;border:1px solid transparent;text-align:left;color:inherit;font:inherit}
+.ins:hover,.ins.on{border-color:var(--line)}
+.ins .v{font-size:20px}
+.ins .d{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ins .chips{display:none}
+.work{flex:1;min-height:0;flex-wrap:nowrap;align-items:stretch}
+.stage{flex:1;height:auto;min-height:0}
+.side{flex:0 0 340px;min-height:0;overflow-y:auto;align-self:stretch;padding-right:2px;scrollbar-width:thin}
+.side .list{max-height:none}
+.handle{display:none}
+.insdetail .chips{display:flex;flex-wrap:wrap;gap:6px}
+.foot{margin:0}
+@media (max-width:760px){
+  .wrap{padding:8px;gap:8px}
+  .intro h1{font-size:13px}
+  .intro h1 span{display:none}
+  body.has-map .bar{gap:8px}
+  body.has-map .bar .top{display:none}
+  body.has-map .start{padding:6px}
+  body.has-map .start .btn.ghost{display:none !important}
+  body.has-map details{display:none}
+  .repohead h2{font-size:16px}
+  .repohead span{display:none}
+  .work{position:relative}
+  .side{position:absolute;left:0;right:0;bottom:0;flex:none;width:auto;max-height:52px;overflow:hidden;background:var(--navy);border-radius:16px 16px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.45);padding:0 8px 8px;z-index:6;transition:max-height .25s ease}
+  .side.open{max-height:62%;overflow-y:auto}
+  .handle{display:flex;align-items:center;justify-content:center;gap:8px;position:sticky;top:0;z-index:2;width:100%;min-height:52px;border:0;background:var(--navy);color:var(--text);font-weight:700;font-size:14px}
+  .handle i{width:36px;height:4px;border-radius:9px;background:var(--line)}
+  .stage{border-radius:14px}
+  .legend{display:none}
+  .card{padding:16px}
+}
 </style>
 </head>
-<body>
+<body class="has-map">
 <div class="wrap">
+  <div class="bar">
   <header class="top">
     <div class="brand">
       <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="4" fill="#FF7A59"/><circle cx="18" cy="18" r="9.5" fill="none" stroke="#E8836A" stroke-width="2" opacity=".75"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="#6BBFB0" stroke-width="2" opacity=".55"/></svg>
@@ -111,9 +175,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
     </div>
   </header>
 
-  <section class="card start" aria-labelledby="h1">
-    <h1 id="h1">Paste a repo. Switch something off. Watch what breaks.</h1>
-    <p>Ripple turns every file — code, scripts, configs, workflows and docs — into an object on a live map, linked by what it imports, runs, mentions or uses. Switch one off and see the ripple before you change anything. Runs in your browser — nothing is uploaded anywhere.</p>
+  <section class="card start" aria-label="Choose a repo">
     <form id="form" class="row">
       <label class="sr" for="url">GitHub repo URL</label>
       <input id="url" class="field" placeholder="github.com/owner/repo — or github.com/owner for all their repos" autocomplete="off" spellcheck="false">
@@ -128,8 +190,15 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
       <label class="sr" for="token">GitHub token</label>
       <input id="token" type="password" class="field" placeholder="ghp_… (read-only is enough — kept in this tab only, never saved)" autocomplete="off">
     </details>
-    <div id="status" role="status" aria-live="polite"><div class="msg"></div><div class="bar"><i></i></div></div>
+    <div id="status" role="status" aria-live="polite"><div class="msg"></div><div class="pbar"><i></i></div></div>
   </section>
+  </div>
+  <div class="intro">
+    <h1>Paste a repo <span>or a whole account</span>. Switch something off. Watch what breaks.</h1>
+    <ul class="langs" aria-label="Languages Ripple reads">
+      <li class="lab">Reads</li><li>JavaScript</li><li>TypeScript</li><li>Python</li><li>Go</li><li>Rust</li><li>Java</li><li>Kotlin</li><li>Scala</li><li>C</li><li>C++</li><li>C#</li><li>PHP</li><li>Ruby</li><li>Swift</li><li>Dart</li><li>Lua</li><li>Solidity</li><li>GDScript</li><li>Shell</li><li>HTML</li><li>CSS</li><li>Vue</li><li>Svelte</li><li class="also">+ workflows · YAML · Dockerfiles · Markdown · Godot scenes · manifests</li>
+    </ul>
+  </div>
 
   <section id="app" aria-label="Repo map">
     <div class="repohead"><h2 id="repoName"></h2><span id="repoMeta"></span></div>
@@ -146,7 +215,9 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
         <div class="legend" id="legend"></div>
         <div id="tip"></div>
       </div>
-      <aside class="side">
+      <aside class="side" id="side">
+        <button type="button" class="handle" id="sheetBtn" aria-expanded="false"><i></i><span>Details</span></button>
+        <div class="pane insdetail" id="insPane" hidden></div>
         <div class="pane">
           <h3>Find</h3>
           <div class="search"><label class="sr" for="q">Search files and packages</label><input id="q" class="field" placeholder="Type a name…" autocomplete="off"><div class="results" id="results"></div></div>
@@ -160,11 +231,11 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
           <input id="pq" class="field" placeholder="Filter packages…" autocomplete="off" style="min-height:44px;font-size:14px">
           <div class="list" id="pkgList"></div>
         </div>
+        <div class="pane foot">
+          <button class="btn teal" type="button" id="exportBtn">Copy engine model</button>
+          <span class="hint">The same data format drives quotes, agent permissions and agreements.</span>
+        </div>
       </aside>
-    </div>
-    <div class="foot">
-      <button class="btn teal" type="button" id="exportBtn">Copy engine model</button>
-      <span>The same data format drives quotes, agent permissions and agreements.</span>
     </div>
   </section>
 </div>
@@ -187,8 +258,8 @@ var BUILTINS = new Set('assert async_hooks buffer child_process cluster console 
 var PY_STD = new Set('__future__ abc argparse array ast asyncio base64 binascii bisect builtins calendar cmath collections concurrent configparser contextlib contextvars copy csv ctypes dataclasses datetime decimal difflib dis email enum errno fnmatch fractions ftplib functools gc getopt getpass gettext glob gzip hashlib heapq hmac html http imaplib importlib inspect io ipaddress itertools json keyword locale logging lzma math mimetypes multiprocessing numbers operator os pathlib pickle pkgutil platform pprint profile queue random re sched secrets select shelve shlex shutil signal smtplib socket socketserver sqlite3 ssl stat statistics string struct subprocess sys sysconfig tarfile tempfile textwrap threading time timeit tkinter token tokenize traceback types typing unicodedata unittest urllib uuid venv warnings wave weakref webbrowser xml xmlrpc zipfile zipimport zlib zoneinfo'.split(' '));
 // Command-line tools worth showing as outside objects (everyday shell builtins like grep/sed are left out on purpose).
 var TOOLS = 'curl wget jq yq git docker podman kubectl helm terraform aws gcloud az gh openssl ssh scp rsync npm npx pnpm yarn deno bun pip pip3 uv cargo rustc gcc clang cmake mvn gradle dotnet composer gem bundle gitleaks trivy semgrep hadolint shellcheck eslint prettier ffmpeg sqlite3 psql mysql redis-cli gpg cosign ollama systemctl'.split(' ');
-var CODE_EXT = 'js mjs cjs jsx ts tsx mts vue svelte py rs go php rb c h cc cpp hpp cxx cs java kt kts swift scala lua pl r dart ex exs erl hs clj sql'.split(' ');
-var TEXT_EXT = CODE_EXT.concat('html htm css scss sass less sh bash zsh fish ps1 bat cmd yml yaml json jsonc toml ini cfg conf xml env properties gradle tf hcl md mdx txt rst adoc'.split(' '));
+var CODE_EXT = 'js mjs cjs jsx ts tsx mts vue svelte py rs go php rb c h cc cpp hpp cxx cs java kt kts swift scala lua pl r dart ex exs erl hs clj sql gd sol'.split(' ');
+var TEXT_EXT = CODE_EXT.concat('html htm css scss sass less sh bash zsh fish ps1 bat cmd yml yaml json jsonc toml ini cfg conf xml env properties gradle tf hcl md mdx txt rst adoc tscn tres godot'.split(' '));
 var TEXT_RE = new RegExp('\\.(' + TEXT_EXT.join('|') + ')$', 'i');
 var NAMED_RE = /(^|\/)(go\.mod|go\.work|readme|license|licence|notice|changelog|contributing|security|authors|codeowners|makefile|dockerfile|containerfile|procfile|gemfile|rakefile|justfile|vagrantfile|\.gitignore|\.dockerignore|\.editorconfig|\.env\.example|\.nvmrc|\.npmrc|\.safeauditignore)$/i;
 var IGNORE_RE = /(^|\/)(node_modules|bower_components|dist|build|out|vendor|target|\.git|__pycache__|coverage|\.next|\.nuxt|\.venv|venv|site-packages|\.idea|\.vscode)(\/|$)|\.min\.(js|css)$|\.d\.ts$|\.bundle\.js$|\.map$|(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|Cargo\.lock|poetry\.lock|composer\.lock|Gemfile\.lock|go\.sum|uv\.lock)$/i;
@@ -329,6 +400,40 @@ function cRefs(src) {
   each(/^\s*#\s*include\s*"([^"]+)"/gm, src, function (m) { refs.push({ t: 'path', spec: m[1], how: 'imports', alsoRoot: true, alsoInclude: true }); });
   return { refs: refs, unknown: 0 };
 }
+// Godot: res:// paths are project-root paths (scripts, scenes, resources).
+function godotRefs(src) {
+  var refs = [], s = src.replace(/(^|\s)#[^\n]*/g, '$1');
+  var add = function (x, how) { if (/^res:\/\//.test(x)) refs.push({ t: 'path', spec: '/' + x.slice(6), how: how }); else if (!/^(user|uid):/.test(x)) refs.push({ t: 'path', spec: x, how: how, alsoRoot: true }); };
+  each(/\b(?:preload|load)\s*\(\s*["']([^"']+)["']/g, s, function (m) { add(m[1], 'loads'); });
+  each(/^\s*extends\s+["']([^"']+)["']/gm, s, function (m) { add(m[1], 'imports'); });
+  each(/"(res:\/\/[^"]+)"/g, s, function (m) { if (!/(?:preload|load)\s*\(\s*$/.test(s.slice(Math.max(0, m.index - 12), m.index))) add(m[1], 'uses'); });
+  return { refs: refs, unknown: (s.match(/\b(?:preload|load)\s*\(\s*(?!["'])/g) || []).length };
+}
+function solRefs(src) {
+  var s = stripJsComments(src), refs = [];
+  each(/\bimport\s+(?:[^'";]*?\bfrom\s+)?["']([^"']+)["']/g, s, function (m) { if (/^\./.test(m[1])) refs.push({ t: 'path', spec: m[1], how: 'imports' }); else refs.push({ t: 'solpkg', spec: m[1] }); });
+  return { refs: refs, unknown: 0 };
+}
+function csRefs(src) {
+  var s = stripJsComments(src), refs = [];
+  each(/^\s*(?:global\s+)?using\s+(?:static\s+)?(?:\w+\s*=\s*)?([\w.]+)\s*;/gm, s, function (m) { refs.push({ t: 'csns', ns: m[1] }); });
+  return { refs: refs, unknown: 0 };
+}
+function swiftRefs(src) {
+  var refs = [];
+  each(/^\s*(?:@testable\s+)?import\s+(?:class\s+|struct\s+|func\s+|enum\s+)?(\w+)/gm, stripJsComments(src), function (m) { refs.push({ t: 'swift', name: m[1] }); });
+  return { refs: refs, unknown: 0 };
+}
+function dartRefs(src) {
+  var refs = [];
+  each(/^\s*(?:import|export|part)\s+['"]([^'"]+)['"]/gm, stripJsComments(src), function (m) { refs.push({ t: 'dart', spec: m[1] }); });
+  return { refs: refs, unknown: 0 };
+}
+function luaRefs(src) {
+  var refs = [], s = src.replace(/--\[\[[\s\S]*?\]\]/g, '').replace(/--[^\n]*/g, '');
+  each(/\brequire\s*\(?\s*["']([^"']+)["']/g, s, function (m) { refs.push({ t: 'lua', spec: m[1] }); });
+  return { refs: refs, unknown: (s.match(/\brequire\s*\(?\s*(?!["'])[\w]/g) || []).length };
+}
 function jvmRefs(src) {
   var refs = [];
   each(/^\s*import\s+(?:static\s+)?([\w.]+)(?:\.\*)?\s*;?\s*$/gm, src, function (m) { refs.push({ t: 'jvm', name: m[1] }); });
@@ -351,6 +456,12 @@ function readerFor(p) {
   if (e === 'rb') return rubyRefs;
   if (/^(c|h|cc|cpp|hpp|cxx)$/.test(e)) return cRefs;
   if (/^(java|kt|kts|scala)$/.test(e)) return jvmRefs;
+  if (/^(gd|tscn|tres|godot)$/.test(e)) return godotRefs;
+  if (e === 'sol') return solRefs;
+  if (e === 'cs') return csRefs;
+  if (e === 'swift') return swiftRefs;
+  if (e === 'dart') return dartRefs;
+  if (e === 'lua') return luaRefs;
   return null;
 }
 // A first line like "#!/usr/bin/env bash" turns an extensionless file into a script.
@@ -371,6 +482,10 @@ function buildGraph(files) {
   var pyTops = new Set(Array.from(pyIndex.keys()).map(function (k) { return k.split('.')[0]; }));
   var goModule = null;
   paths.forEach(function (p) { if (/(^|\/)go\.mod$/.test(p)) { var m = /^\s*module\s+(\S+)/m.exec(files[p] || ''); if (m && (!goModule || dirOf(p).length < goModule.dir.length)) goModule = { name: m[1], dir: dirOf(p) }; } });
+  var csNs = new Map();
+  paths.forEach(function (p) { if (extOf(p) === 'cs') each(/\bnamespace\s+([\w.]+)/g, stripJsComments(files[p] || ''), function (m) { (csNs.get(m[1]) || csNs.set(m[1], []).get(m[1])).push(p); }); });
+  var dartName = null;
+  paths.forEach(function (p) { if (/(^|\/)pubspec\.yaml$/.test(p)) { var m = /^name:\s*([\w-]+)/m.exec(files[p] || ''); if (m && !dartName) dartName = { name: m[1], dir: dirOf(p) }; } });
   var goDirs = new Map();
   paths.forEach(function (p) { if (extOf(p) === 'go' && !/_test\.go$/.test(p)) { var d = dirOf(p); (goDirs.get(d) || goDirs.set(d, []).get(d)).push(p); } });
 
@@ -501,6 +616,41 @@ function buildGraph(files) {
         if (rh2) addEdge(p, rh2, 'imports'); else usePkg(p, ref.spec.split('/')[0]);
         return;
       }
+      if (ref.t === 'solpkg') {
+        var sh = probe(ref.spec, ['']) || probe('node_modules/' + ref.spec, ['']) || probe('lib/' + ref.spec, ['']) || probe('contracts/' + ref.spec, ['']);
+        if (sh) addEdge(p, sh, 'imports'); else usePkg(p, pkgName(ref.spec));
+        return;
+      }
+      if (ref.t === 'csns') {
+        var hits = (csNs.get(ref.ns) || []).filter(function (f) { return f !== p; });
+        if (hits.length) { hits.slice(0, 12).forEach(function (f) { addEdge(p, f, 'imports'); }); return; }
+        if (csNs.has(ref.ns) || /^(System|Microsoft|Windows|Unity(Engine|Editor)?|Godot)(\.|$)/.test(ref.ns)) { builtinCount++; return; }
+        usePkg(p, ref.ns.split('.').slice(0, 2).join('.'));
+        return;
+      }
+      if (ref.t === 'swift') {
+        if (/^(Foundation|UIKit|SwiftUI|AppKit|Combine|CoreData|CoreGraphics|Darwin|Dispatch|XCTest|os|Swift|Observation|CoreLocation|MapKit|AVFoundation|Security|CryptoKit)$/.test(ref.name)) { builtinCount++; return; }
+        usePkg(p, ref.name);
+        return;
+      }
+      if (ref.t === 'dart') {
+        var ds = ref.spec;
+        if (/^dart:/.test(ds)) { builtinCount++; return; }
+        var pm = /^package:([\w-]+)\/(.+)$/.exec(ds);
+        if (pm) {
+          if (dartName && pm[1] === dartName.name) { var dh = probe((dartName.dir ? dartName.dir + '/' : '') + 'lib/' + pm[2], ['']); if (dh) addEdge(p, dh, 'imports'); else missing.push({ from: p, spec: ds }); }
+          else usePkg(p, pm[1]);
+          return;
+        }
+        var dr = probe(dir + '/' + ds, ['']); if (dr) addEdge(p, dr, 'imports'); else missing.push({ from: p, spec: ds });
+        return;
+      }
+      if (ref.t === 'lua') {
+        var lp = ref.spec.replace(/\./g, '/');
+        var lh = probe(dir + '/' + lp, ['.lua', '/init.lua']) || probe(lp, ['.lua', '/init.lua']);
+        if (lh) addEdge(p, lh, 'imports'); else usePkg(p, ref.spec.split('.')[0]);
+        return;
+      }
       if (ref.t === 'jvm') {
         var jp = ref.name.split('.').join('/'), jh = null;
         paths.forEach(function (f) { if (!jh && /\.(java|kt|kts|scala)$/.test(f) && f.replace(/\.(java|kt|kts|scala)$/, '').slice(-jp.length) === jp) jh = f; });
@@ -585,8 +735,8 @@ var S = { g: null, byId: null, nodes: [], edges: [], removed: new Set(), depth: 
 function status(msg, pct, err) {
   var st = $('#status'); st.style.display = 'block'; st.className = err ? 'err' : '';
   st.querySelector('.msg').textContent = msg;
-  st.querySelector('.bar').style.display = pct == null ? 'none' : 'block';
-  if (pct != null) st.querySelector('.bar i').style.width = Math.round(pct * 100) + '%';
+  st.querySelector('.pbar').style.display = pct == null ? 'none' : 'block';
+  if (pct != null) st.querySelector('.pbar i').style.width = Math.round(pct * 100) + '%';
 }
 function parseRepo(str) {
   var s = str.trim().replace(/\.git$/, '').replace(/^https?:\/\//, '').replace(/^www\./, '');
@@ -792,10 +942,11 @@ function start(res) {
   if (S.unit === 'repos') S.labelSet = new Set(g.nodes.filter(function (n) { return n.sub === 'repo' || n.inn.length > 2; }).map(function (n) { return n.id; }));
   S.alpha = 1; S.touched = false; S.dirty = true;
   $('#status').style.display = 'none';
-  $('#app').style.display = 'block';
+  $('#app').style.display = 'flex';
+  document.body.classList.add('has-map');
   renderHead(); renderInsights(); renderLegend(); renderPkgs(); renderSel(); renderImpact();
   resize();
-  $('#app').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  $('#insPane').hidden = true; openSheet(false);
 }
 
 function tick() {
@@ -829,7 +980,7 @@ function resize() {
   W = r.width; H = r.height; cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   if (!S.touched) fit(); S.dirty = true;
 }
-window.addEventListener('resize', function () { if (S.g) resize(); });
+if (window.ResizeObserver) new ResizeObserver(function () { if (S.g) resize(); }).observe($('#stage'));
 function fit() {
   if (!S.nodes.length || !W) return;
   var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
@@ -959,7 +1110,7 @@ $('#zfit').onclick = function () { S.touched = false; fit(); S.dirty = true; };
 function centerOn(n) { S.touched = true; var k = Math.max(S.view.k, 1.1); S.view.k = k; S.view.x = W / 2 - n.x * k; S.view.y = H / 2 - n.y * k; S.dirty = true; }
 
 // ----- state changes -----
-function select(id) { S.selected = id; S.dirty = true; renderSel(); }
+function select(id) { S.selected = id; S.dirty = true; renderSel(); if (id) { openSheet(true); $('#side').scrollTop = 0; } }
 function setRemoved(id, off) {
   if (off) S.removed.add(id); else S.removed.delete(id);
   S.depth = rippleFrom(Array.from(S.removed), S.byId);
@@ -981,8 +1132,21 @@ function renderHead() {
   if (S.meta.truncated) bits.push('GitHub sent a partial file list');
   $('#repoMeta').textContent = bits.join(' · ');
 }
+function chipFor(ch) { return ch.id ? el('button', { class: 'chip', type: 'button', title: ch.title || ch.label, onclick: function () { var n = S.byId.get(ch.id); select(ch.id); centerOn(n); } }, [ch.label]) : el('span', { class: 'chip', title: ch.label }, [ch.label]); }
+function showInsight(card, k, v, d, chips) {
+  var p = $('#insPane'), same = !p.hidden && p.dataset.k === k;
+  Array.prototype.forEach.call(document.querySelectorAll('.ins.on'), function (x) { x.classList.remove('on'); });
+  if (same) { p.hidden = true; return; }
+  card.classList.add('on'); p.dataset.k = k; p.innerHTML = ''; p.hidden = false;
+  p.appendChild(el('div', { class: 'row', style: 'justify-content:space-between' }, [el('h3', { text: k + ' · ' + v }), el('button', { class: 'chip', type: 'button', 'aria-label': 'Close', onclick: function () { p.hidden = true; card.classList.remove('on'); } }, ['✕'])]));
+  if (d) p.appendChild(el('span', { class: 'hint', text: d }));
+  if (chips && chips.length) { var box = el('div', { class: 'chips' }); chips.slice(0, 60).forEach(function (ch) { box.appendChild(chipFor(ch)); }); p.appendChild(box); }
+  openSheet(true); $('#side').scrollTop = 0;
+}
+function openSheet(on) { var s = $('#side'); s.classList.toggle('open', on); $('#sheetBtn').setAttribute('aria-expanded', on ? 'true' : 'false'); }
 function insight(k, v, d, chips) {
-  var c = el('div', { class: 'ins' }, [el('span', { class: 'k', text: k }), el('span', { class: 'v', text: String(v) }), d ? el('span', { class: 'd', text: d }) : null]);
+  var c = el('button', { class: 'ins', type: 'button', title: d || '' }, [el('span', { class: 'k', text: k }), el('span', { class: 'v', text: String(v) }), d ? el('span', { class: 'd', text: d }) : null]);
+  c.addEventListener('click', function () { showInsight(c, k, v, d, chips); });
   if (chips && chips.length) {
     var box = el('div', { class: 'chips' });
     chips.slice(0, 4).forEach(function (ch) { box.appendChild(ch.id ? el('button', { class: 'chip', type: 'button', title: ch.title || ch.label, onclick: function () { var n = S.byId.get(ch.id); select(ch.id); centerOn(n); } }, [ch.label]) : el('span', { class: 'chip', title: ch.label }, [ch.label])); });
@@ -1116,6 +1280,8 @@ function renderImpact() {
   p.appendChild(list);
 }
 $('#pq').addEventListener('input', renderPkgs);
+$('#sheetBtn').addEventListener('click', function () { openSheet(!$('#side').classList.contains('open')); });
+window.addEventListener('resize', function () { if (S.g) resize(); });
 $('#q').addEventListener('input', function () {
   var q = this.value.trim().toLowerCase(), out = $('#results'); out.innerHTML = '';
   if (!q || !S.g) return;
@@ -1158,7 +1324,8 @@ $('#form').addEventListener('submit', function (e) {
   var u = $('#url').value; if (!u.trim()) { $('#url').focus(); return; }
   run(loadGitHub(u, $('#token').value.trim()));
 });
-$('#sample').onclick = function () { run(Promise.resolve({ files: SAMPLE, meta: { name: 'Sample PWA', ref: 'built-in example', kind: 'sample' } })); };
+$('#sample').onclick = function () { run(Promise.resolve({ files: SAMPLE, meta: { name: 'Example: a small web app', ref: 'built-in example — paste your own repo above', kind: 'sample' } })); };
+$('#sample').click();
 $('#zip').addEventListener('change', function () { if (this.files[0]) run(loadZip(this.files[0])); this.value = ''; });
 var dragDepth = 0;
 window.addEventListener('dragenter', function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types, 'Files') >= 0) { dragDepth++; $('#drop').style.display = 'flex'; } });

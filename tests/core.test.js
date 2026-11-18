@@ -85,6 +85,32 @@ test('Go, Rust, PHP, Ruby, C, Java, CSS, Dockerfile, extensionless scripts', () 
   assert(edge(g, 'tools/deploy', 'pkg:tool:rsync'));
 });
 
+test('GDScript/Godot, Solidity, C#, Swift, Dart, Lua', () => {
+  const g = R.buildGraph({
+    'project.godot': '[application]\nrun/main_scene="res://scenes/main.tscn"\n',
+    'scenes/main.tscn': '[ext_resource type="Script" path="res://scripts/board.gd" id="1"]\n',
+    'scripts/board.gd': 'extends "res://scripts/base.gd"\nconst Unit = preload("res://scripts/unit.gd")\n', 'scripts/base.gd': 'extends Node\n', 'scripts/unit.gd': '',
+    'contracts/Vault.sol': 'import "./lib/Math.sol";\nimport {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";\n', 'contracts/lib/Math.sol': '',
+    'App/Program.cs': 'using System;\nusing Acme.Core;\nusing Newtonsoft.Json;\n', 'App/Core/Thing.cs': 'namespace Acme.Core;\n',
+    'Sources/main.swift': 'import Foundation\nimport Alamofire\n',
+    'pubspec.yaml': 'name: myapp\n', 'lib/main.dart': "import 'package:flutter/material.dart';\nimport 'package:myapp/util.dart';\nimport 'dart:io';\n", 'lib/util.dart': '',
+    'game/main.lua': 'local u = require("game.util")\n', 'game/util.lua': ''
+  });
+  assert(edge(g, 'project.godot', 'scenes/main.tscn', 'uses'));
+  assert(edge(g, 'scenes/main.tscn', 'scripts/board.gd', 'uses'));
+  assert(edge(g, 'scripts/board.gd', 'scripts/base.gd', 'imports'));
+  assert(edge(g, 'scripts/board.gd', 'scripts/unit.gd', 'loads'));
+  assert(edge(g, 'contracts/Vault.sol', 'contracts/lib/Math.sol'));
+  assert(edge(g, 'contracts/Vault.sol', 'pkg:@openzeppelin/contracts'));
+  assert(edge(g, 'App/Program.cs', 'App/Core/Thing.cs'));
+  assert(edge(g, 'App/Program.cs', 'pkg:Newtonsoft.Json'));
+  assert(edge(g, 'Sources/main.swift', 'pkg:Alamofire'));
+  assert(!g.nodes.some(n => n.id === 'pkg:Foundation'));
+  assert(edge(g, 'lib/main.dart', 'lib/util.dart'));
+  assert(edge(g, 'lib/main.dart', 'pkg:flutter'));
+  assert(edge(g, 'game/main.lua', 'game/util.lua'));
+});
+
 test('file filter: text in, binaries and lockfiles out', () => {
   assert(R.wanted('LICENSE', 100));
   assert(R.wanted('tools/deploy', 10));

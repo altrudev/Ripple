@@ -17,7 +17,9 @@ Ripple turns code into visual objects. Every file — code, scripts, configs, wo
 
 ## What it reads
 
-JavaScript / TypeScript (incl. Vue, Svelte, workers, service workers), Python, HTML, CSS, shell scripts (incl. extensionless files with a shebang), GitHub workflows and YAML, Dockerfiles, Markdown links, Rust, Go, PHP, Ruby, C/C++, Java/Kotlin/Scala — plus a universal "mentions" pass that links any file naming another file of the repo.
+**21 languages:** JavaScript, TypeScript, Python, Go, Rust, Java, Kotlin, Scala, C, C++, C#, PHP, Ruby, Swift, Dart, Lua, Solidity, GDScript (Godot), Shell, HTML, CSS — plus Vue and Svelte components, web/service workers, extensionless scripts with a shebang.
+
+**Also:** GitHub workflows and YAML, Dockerfiles, Markdown links, Godot scenes/project files, and manifests (package.json, pyproject.toml, requirements.txt, Cargo.toml, go.mod, pubspec.yaml) — plus a universal "mentions" pass that links any file naming another file of the repo.
 
 ## What it tells you
 

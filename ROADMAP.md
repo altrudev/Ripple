@@ -1,6 +1,6 @@
 # Ripple — Roadmap
 
-Last updated: 2026-11-18 · Current version: **v0.2 (live)**
+Last updated: 2026-11-18 · Current version: **v0.3 (live)** — Phase 0 done, 21 languages
 
 Ripple's idea in one line: *code becomes visual objects; flip a switch, see the consequence.*
 The goal of the next versions is to make the map feel **alive** (time, health), **meaningful** (purpose, ghost links) and **actionable** (what to fix next) — and to put it on the altru.dev homepage as a living portfolio.
@@ -18,7 +18,8 @@ The goal of the next versions is to make the map feel **alive** (time, health), 
 | Ripple | ✅ Switch any object off → animated ripple through dependents, count + list of affected |
 | Insights | ✅ Most relied on, nothing uses these, outside dependencies, installed-never-imported, missing references, runtime-loaded code; account: standalone repos, families |
 | Engine model export | ✅ JSON: nodes, edges (typed), levers, effects, snapshot |
-| Languages | ✅ JS/TS/Vue/Svelte, Python, HTML, CSS, shell (+shebang), YAML/workflows, Dockerfile, Markdown, Rust, Go, PHP, Ruby, C/C++, Java/Kotlin/Scala + universal "mentions" |
+| Languages | ✅ 21: JavaScript, TypeScript, Python, Go, Rust, Java, Kotlin, Scala, C, C++, C#, PHP, Ruby, Swift, Dart, Lua, Solidity, GDScript, Shell, HTML, CSS (+ Vue/Svelte, workflows/YAML, Dockerfile, Markdown, Godot scenes, manifests, universal "mentions"). Listed on the page itself |
+| Layout (Phase 0) | ✅ v0.3: fits the window at every size, no page scroll; compact top bar + one-line tagline + language chips; opens straight onto an example map; insight strip opens details in the side panel; phone = full map + bottom sheet |
 | Hosting | ✅ altru.dev/apps/ripple/try (static), product page altru.dev/apps/ripple (featured) |
 | Tests | ✅ `tests/core.test.js` (Node, no deps). Browser tests were run ad hoc with Playwright — not yet in repo |
 
@@ -29,7 +30,7 @@ First real-data run (altrudev, 52 repos): 11 repo-to-repo links, 37 standalone r
 - Static analysis only: code loaded by computed names is flagged, not followed.
 - Repo mode caps at 600 source files (code first, docs last).
 - Account mode reads only README + top-level manifests per repo.
-- Layout: the page scrolls (header + insights + map + side panel). **Must change — see Phase 0.**
+- C#, Swift and Lua links are namespace/module based (approximate); Elixir, Haskell, SQL, Perl, PowerShell show as objects linked only by mentions.
 
 ---
 
@@ -41,7 +42,7 @@ UI rule (applies to every phase): *simple on the surface, meaningful detail on d
 
 ---
 
-## Phase 0 — App shell that fits the window (prerequisite)
+## Phase 0 — App shell that fits the window (prerequisite) — ✅ shipped in v0.3
 
 - Single-screen grid: top bar (logo · input · mode) → slim insight strip (chips, expandable) → map | side panel.
 - Collapse the big hero once a map is loaded (input moves into the top bar).
